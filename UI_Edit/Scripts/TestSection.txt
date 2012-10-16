@@ -1,0 +1,33 @@
+-----------------------------------------
+-- TestEnter
+-- Enters the test section of the editor
+-----------------------------------------
+function TestEnter ()
+	-----------------------------------------------------------------------------------
+	-- On entry, install a key-handler to return to the main section, and populate the
+	-- scene with the user's frame, layers, panes, and pane items.
+	-----------------------------------------------------------------------------------
+	if Main.Enter[Main.Tier] then
+		---------------------------------
+		-- Task to check for escape key.
+		---------------------------------
+		local function _T_EscKey ()
+			--------------------------------------------------------------------------
+			-- If the escape key was just released, unload the test scene data and go
+			-- back to the main section. If not, keep this task in the queue.
+			--------------------------------------------------------------------------
+			if Main.CurU[SDL.K_ESCAPE] then
+				CloseTestScene();
+				GoToSection(MainEnter);
+				return true;
+			end
+			return false;
+		end
+		PrependTask(_T_EscKey);
+		PopulateTestScene();
+	end
+	---------------------------------------------------------------
+	-- To enter the test section, we install the user layer frame.
+	---------------------------------------------------------------
+	UI.LoadFrameLayers(unpack(Main.F));
+end

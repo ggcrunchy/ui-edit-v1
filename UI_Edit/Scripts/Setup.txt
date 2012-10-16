@@ -1,0 +1,5 @@
+--------------------------------------------
+-- Initialize the rendering and UI systems.
+--------------------------------------------
+Render.SetupGraphics(640, 480, 0, false);
+UI.InitSystem();

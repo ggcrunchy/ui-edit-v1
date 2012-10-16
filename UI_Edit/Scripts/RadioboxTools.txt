@@ -1,0 +1,235 @@
+----------------------------------------------------
+-- PrimeRadiobox
+-- Creates and primes a radiobox and its properties
+-- Returns: Name used to reference radiobox
+----------------------------------------------------
+function PrimeRadiobox ()
+	local r = Radiobox.Create();
+	Main.WP[r] = { a = {} };
+	return r;
+end
+
+-------------------------------------------------------------
+-- RB_Range
+-- Builds an iterator over a radiobox range
+-- r: Radiobox to iterate over
+-- arg[1](...): Start index; if blank, start at 0
+-- arg[2](...): Range count; if blank, use item count
+-- Returns: Iterator which returns index and option position
+-------------------------------------------------------------
+function RB_Range (r, ...)
+	------------------------------------------------------------------------------------
+	-- Setup some upvalues for the iterator. Get any non-default values that are given, 
+	-- and clamp the range to [0,size).
+	------------------------------------------------------------------------------------
+	local n, a, s, c = Radiobox.GetOptionCount(r), Main.WP[r].a, arg[1], arg[2];
+	if not s then s = 0 end;
+	if not c then c = n end;
+	local e = s + c;
+	if e > n then e = n end;
+	----------------------------------------------------------------------------------
+	-- Builds the iterator closure. This returns the index plus one and option of the 
+	-- member that is indexed by the second argument plus two; we terminate when this
+	-- index extends beyond the range. The iterator keeps no state; the radiobox is
+	-- zero-based, and its point set one-based, so we start one less than the start.
+	----------------------------------------------------------------------------------
+	local function _I (state, i)
+		if i + 1 >= e then return nil end;
+		return i + 1, a[i + 2];
+	end
+	return _I, nil, s - 1;
+end
+
+-----------------------------------------
+-- RB_LoadPictures
+-- Loads a radiobox's picture properties
+-- r: Name used to reference radiobox
+-- rp: Radiobox properties
+-----------------------------------------
+function RB_LoadPictures (r, rp)
+	W_SetPictures(r, rp.pDB.p, rp.pOB.p, rp.pGB.p, rp.pEB.p);
+	W_ExchangePictures(r, "pDB", "pOB", "pGB", "pEB");
+	W_SetPictures(r, rp.pDC.p, rp.pOC.p, rp.pGC.p, rp.pEC.p);
+	W_ExchangePictures(r, "pDC", "pOC", "pGC", "pEC");
+	W_SetPictures(r, rp.pD.p, rp.pO.p, rp.pG.p, rp.pE.p);
+end
+
+------------------------------------------------
+-- RB_Load
+-- Loads a radiobox with user radiobox properties
+-- r: Name used to reference radiobox
+-- rp: Radiobox properties
+------------------------------------------------
+function RB_Load (r, rp)
+	local p = W_GetPSet(r);
+	p.a, p.ow, p.oh = { n = 0 }, rp.ow, rp.oh;
+	for i, v in ipairs(rp.options) do
+		table.insert(p.a, { x = v.x, y = v.y });
+	end
+	Radiobox.Setup(r, rp.options.n, rp.choice);
+end
+
+--------------------------------------------------
+-- NewRadiobox
+-- Builds a user radiobox with default properties
+-- Returns: The new radiobox
+--------------------------------------------------
+function NewRadiobox ()
+	return {
+		options = { { x = .05, y = .05 }; n = 1 },	-- Option list
+		choice = 0,	-- Index of choice option
+		ow = .1, oh = .1,	-- Option dimensions
+		bClick = true,	-- Allow click
+		m = { D = "Radio", HT = "Radio", PE = "Radio", F = "NOP" },	-- Methods
+		pD = {}, pO = {}, pG = {}, pE = {}, pDB = {}, pOB = {},	pGB = {}, pEB = {}, pDC = {}, pOC = {}, pGC = {}, pEC = {}	-- Pictures
+	};
+end
+
+---------------------------
+-- DeleteRadiobox
+-- Unloads a user radiobox
+-- r: Index of radiobox
+---------------------------
+function DeleteRadiobox (r)
+	------------------------------------------------------------------------
+	-- Remove the basic widget properties, followed by radiobox properties.
+	------------------------------------------------------------------------
+	local wp = LB_GetEDatum(Main.Comp.Radiobox, r);
+	UnregisterWidget(wp);
+	if wp.pDB.p then Render.UnloadPicture(wp.pDB.p) end;
+	if wp.pOB.p then Render.UnloadPicture(wp.pOB.p) end;
+	if wp.pGB.p then Render.UnloadPicture(wp.pGB.p) end;
+	if wp.pEB.p then Render.UnloadPicture(wp.pEB.p) end;
+	if wp.pDC.p then Render.UnloadPicture(wp.pDC.p) end;
+	if wp.pOC.p then Render.UnloadPicture(wp.pOC.p) end;
+	if wp.pGC.p then Render.UnloadPicture(wp.pGC.p) end;
+	if wp.pEC.p then Render.UnloadPicture(wp.pEC.p) end;	
+end
+
+--------------------------------------
+-- SaveRadiobox
+-- Saves a user radiobox
+-- f: File to which radiobox is saved
+-- r: Radiobox properties
+--------------------------------------
+function SaveRadiobox (f, r)
+	f:write(string.format("\t<nOption>%i</nOption>\n", r.options.n));
+	for i, v in ipairs(r.options) do
+		f:write("\t<RO>\n");
+		f:write("\t");
+		SaveFloats(f, v, { "x" });
+		f:write("\t");
+		SaveFloats(f, v, { "y" });
+		f:write("\t</RO>\n");
+	end	
+	SaveMethods(f, r, false);
+	SaveInts(f, r, { "choice" });
+	SaveFloats(f, r, { "ow", "oh" });
+	SaveBooleans(f, r, { "bClick" });
+	SavePictures(f, r, { "pDB", "pOB", "pGB", "pEB", "pDC", "pOC", "pGC", "pEC" });
+	SaveWidget(f, r);
+end
+
+-----------------------------------------
+-- LoadRadioboxes
+-- Loads user radioboxes from a data set
+-- ld: Loading data
+-----------------------------------------
+function LoadRadioboxes (ld)
+	----------------------------------------------------------------------------------
+	-- If the radiobox list is non-empty, run through it, register a new radiobox for 
+	-- each entry, and acquire the radiobox for loading.
+	----------------------------------------------------------------------------------
+	if not ld.b.Radiobox then return end;
+	for i, v in ipairs(ld.b.Radiobox) do
+		RegisterComponent("Radiobox", v.ID);
+		local d = LB_GetEDatum(Main.Comp.Radiobox, i - 1);
+		----------------------------------
+		-- Load required radiobox fields.
+		----------------------------------
+		d.m = v.m;
+		----------------------------------
+		-- Load optional radiobox fields.
+		----------------------------------
+		if v.tag then d.tag = v.tag end;
+		if v.choice then d.choice = v.choice end;
+		if v.ow then d.ow = v.ow end;
+		if v.oh then d.oh = v.oh end;
+		if v.bClick ~= nil then d.bClick = v.bClick end;
+		--------------------------
+		-- Load radiobox options.
+		--------------------------
+		if v.RO then d.options = v.RO end;
+		---------------------------
+		-- Load radiobox pictures.
+		---------------------------
+		LoadPictures(d, v, { "pD", "pO", "pG", "pE", "pDB", "pOB", "pGB", "pEB", "pDC", "pOC", "pGC", "pEC" });
+	end
+end
+
+----------------------------------------
+-- RadioboxFixOptionCoordinates
+-- Fixes options to fit within radiobox
+-- r: Radiobox properties
+----------------------------------------
+function RadioboxFixOptionCoordinates (r)
+	for i, o in ipairs(r.options) do
+		if o.x < .5 * r.ow then o.x = .5 * r.ow end;
+		if o.y < .5 * r.oh then o.y = .5 * r.oh end;
+		if o.x + .5 * r.ow > 1 then o.x = 1 - .5 * r.ow end;
+		if o.y + .5 * r.oh > 1 then o.y = 1 - .5 * r.oh end;
+	end
+end
+
+----------------------------
+-- CacheRadiobox
+-- Copies the radiobox data
+-- r: Radiobox properties
+-- Returns: Radiobox cache
+----------------------------
+function CacheRadiobox (r)
+	local rc = { options = { n = 0 } };
+	rc.bClick, rc.choice, rc.ow, rc.oh = r.bClick, r.choice, r.ow, r.oh;
+	for i, v in ipairs(r.options) do
+		table.insert(rc.options, { x = v.x, y = v.y });
+	end
+	return rc;
+end
+
+---------------------------------
+-- RestoreRadiobox
+-- Restores cached radiobox data
+-- r: Radiobox properties
+-- rc: Radiobox cache
+---------------------------------
+function RestoreRadiobox (r, rc)
+	r.bClick, r.choice, r.ow, r.oh = rc.bClick, rc.choice, rc.ow, rc.oh;
+	r.options = { n = 0 };
+	for i, v in ipairs(rc.options) do
+		table.insert(r.options, { x = v.x, y = v.y });
+	end
+end
+
+-----------------------------------------------------
+-- InstallTestRadioboxes
+-- Installs test radioboxes from the user radioboxes
+-----------------------------------------------------
+function InstallTestRadioboxes ()
+	----------------------------------------------------------
+	-- Create concrete radioboxes out of all user radioboxes.
+	----------------------------------------------------------
+	for i, t, r in LB_Range(Main.Comp.Radiobox) do
+		-----------------------------------------------
+		-- Generate a new radiobox and store its name.
+		-----------------------------------------------
+		Main.W.names[t] = PrimeRadiobox();
+		----------------------------------------------------------
+		-- Assign all user-configured properties to the radiobox.
+		----------------------------------------------------------
+		RB_LoadPictures(Main.W.names[t], r);
+		RB_Load(Main.W.names[t], r);
+		MapMethods(Main.W.names[t], r.m.D, r.m.HT, r.m.PE, r.m.F);
+		Radiobox.AllowClick(Main.W.names[t], r.bClick);
+		Widget.SetTag(Main.W.names[t], r.tag);
+	end
+end

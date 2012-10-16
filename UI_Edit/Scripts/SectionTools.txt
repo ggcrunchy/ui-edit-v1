@@ -1,0 +1,152 @@
+-----------------------------------------
+-- GoToSection
+-- Enters a section, clearing any popups
+-- se: Section enter routine 
+-----------------------------------------
+function GoToSection (se)
+	----------------------------------------------------------------------
+	-- Make the given routine the sole enter routine, and indicate entry.
+	----------------------------------------------------------------------
+	Main.Enters = { se, n = 1 };
+	Main.Enter[Main.Enters.n] = true;
+end
+
+---------------------------
+-- OpenPopup
+-- Opens a new popup
+-- pe: Popup enter routine 
+---------------------------
+function OpenPopup (pe)
+	--------------------------------------------------------------------
+	-- Append the given routine to the enter queue, and indicate entry.
+	--------------------------------------------------------------------
+	table.insert(Main.Enters, pe);
+	Main.Enter[Main.Enters.n] = true;
+end
+
+------------------------
+-- ClosesPopup
+-- Closes the top popup
+------------------------
+function ClosePopup ()
+	-----------------------------------
+	-- Dequeue the back enter routine.
+	-----------------------------------
+	table.remove(Main.Enters);
+end
+
+-------------------------------------------
+-- EnterSection
+-- Builds a closure that goes to a section
+-- se: Section enter routine
+-- Returns: The closure for the section
+-------------------------------------------
+function EnterSection (se)
+	return function (n, e, a)
+		if e == Widget.ButtonRelease and Widget.IsEntered(n) then
+			GoToSection(se);
+		end
+	end
+end
+
+-------------------------------------------
+-- EnterPopup
+-- Builds a closure that opens a new popup
+-- pe: Popup enter routine
+-- Returns: The closure for the popup
+-------------------------------------------
+function EnterPopup (pe)
+	return function (n, e, a)
+		if e == Widget.ButtonRelease and Widget.IsEntered(n) then
+			OpenPopup(pe);
+		end
+	end
+end
+
+---------------------------------------------------
+-- EnterPropertyPopup
+-- Builds a closure that prepares a property popup
+-- c: Component to make current
+-- pe: Popup enter routine
+-- Returns: The closure for the popup
+---------------------------------------------------
+function EnterPropertyPopup (c, pe)
+	return function (n, e, a)
+		if e == Widget.ButtonRelease and Widget.IsEntered(n) then
+			if Listbox.GetItemCount(Main.Comp[c]) ~= 0 then
+				--------------------------------------------------
+				-- Set the current component, and open the popup.
+				--------------------------------------------------
+				Main.CurComp = c;
+				OpenPopup(pe);
+				----------------------------------------------------------------------------
+				-- Cache the current save indicator, so we can replace it if we cancel out.
+				----------------------------------------------------------------------------
+				Main.SaveC = Main.Save;
+			else
+				MessageBox(string.format("No %s to assign to.", c));
+			end
+		end
+	end
+end
+
+--------------------------
+-- LeavePopup
+-- Leaves a popup dialog
+-- e: Event to process
+-- a: Application context
+--------------------------
+function LeavePopup (n, e, a)
+	if e == Widget.ButtonRelease and Widget.IsEntered(n) then
+		ClosePopup();
+	end
+end
+
+-------------------------------------------------
+-- LeavePopupCancel
+-- Leaves a popup dialog and cancels any effects
+-- e: Event to process
+-- a: Application context
+-------------------------------------------------
+function LeavePopupCancel (n, e, a)
+	if e == Widget.ButtonRelease and Widget.IsEntered(n) then
+		---------------------------------------------------
+		-- Close the popup and restore the save indicator.
+		---------------------------------------------------
+		ClosePopup();
+		Main.Save = Main.SaveC;
+	end
+end
+
+---------------------------------
+-- SetupSectionTable
+-- Sets up a section table
+-- t: Section table name
+-- x, y: Pane coordinates
+-- w, h: Pane dimensions
+-- p: PopupBoolean
+---------------------------------
+function SetupSectionTable (t, x, y, w, h, p)
+	Main.S[t] = { PL = PaneLayer.Create() };
+	Main.CurT = Main.S[t];
+	SetupPane(x, y, w, h, p);
+end
+
+-------------------------
+-- LoadSectionTable
+-- Loads a section table
+-- t: Section table name
+-------------------------
+function LoadSectionTable (t)
+	Main.CurT = Main.S[t];
+	UI.LoadFrameLayers(Main.CurT.PL);
+end
+
+------------------------------------
+-- GetComponentTable
+-- Gets a component's section table
+-- t: Component type
+------------------------------------
+function GetComponentTable (t)
+	return Main.S[string.format("Edit%s", t)];
+end

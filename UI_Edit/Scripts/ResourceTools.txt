@@ -1,0 +1,273 @@
+--------------------------------------------------------
+-- BuildTextSet
+-- Creates a basic set of characters using a given font
+-- f: Font used to build set
+-- r, g, b: Red, green, and blue text color
+-- Returns: A table with the generated characters
+--------------------------------------------------------
+function BuildTextSet (f, r, g, b)
+	------------------------------------------------------
+	-- List all relevant symbols, and create a new table.
+	------------------------------------------------------
+	local s = "ABCDEFGHIJKLMNOPQRSTUVWXYZ=.!?,;:-+^()'/ 0123456789";
+	local t = {};
+	---------------------------------------------------------------------
+	-- Run through the string, loading characters, and return the table.
+	---------------------------------------------------------------------
+	for c in string.gfind(s, ".") do
+		t[c] = Render.LoadTextImage(f, c, r, g, b);
+		-------------------------------------------------------------------
+		-- If the character is alphabetic, load its lowercase counterpart.
+		-------------------------------------------------------------------
+		local l = string.lower(c);
+		if c ~= l then
+			t[l] = Render.LoadTextImage(f, l, r, g, b);
+		end
+	end
+	return t;
+end
+
+----------------------------------------------------
+-- NewComponent
+-- Builds a closure that constructs a new component
+-- t: Component type
+-- Returns: The closure for the component
+----------------------------------------------------
+function NewComponent (t)
+	local function _NC ()
+		RegisterComponent(t, nil);
+		Main.Refresh[Main.Enters.n] = true;
+	end
+	return PushButton(_NC);
+end
+
+---------------------------------------------
+-- DeleteComponent
+-- Builds a closure that unloads a component
+-- t: Component type
+-- m: Message if component is not present
+-- Returns: The closure for the component
+---------------------------------------------
+function DeleteComponent (t, m)
+	local function _DC ()
+		local s = LB_Selection(Main.Comp[t]);
+		if not s then
+			MessageBox(m);
+		else
+			--------------------------------------------------------------
+			-- Dispose of the component, and refresh the component lists.
+			--------------------------------------------------------------
+			UnregisterComponent(t, s);
+			Main.Refresh[Main.Enters.n] = true;
+		end
+	end
+	return PushButton(_DC);
+end
+
+-------------------------------------------------
+-- RefreshFreeList
+-- On refresh, loads a list with free components
+-- fl: List to load
+-- ls: Set of component lists from which to draw
+-- m: Component member to inspect for ownership
+-------------------------------------------------
+function RefreshFreeList (fl, ls, m)
+	--------------------------------------------------------------------------------
+	-- We cache the ID belonging to the current selection in the free list. We then 
+	-- clear the list, and scan through the component list.
+	--------------------------------------------------------------------------------
+	local si, s = LB_GetSText(fl);
+	LB_Clear(fl);
+	for e, cl in ipairs(ls) do
+		for i, t, c in LB_Range(Main.Comp[cl]) do
+			-----------------------------------------------------------------------------
+			-- If a component is not owned(e.g. a pane item in a pane), append it in the 
+			-- free list. If its ID was the selection, record its insertion point.
+			-----------------------------------------------------------------------------
+			if not c[m] then
+				if si == t then s = Listbox.GetItemCount(fl) end;
+				LB_AppendEntry(fl, t, c, true);
+			end
+		end
+	end
+	------------------------------------------------------------------------------------
+	-- If the selection is still available, reselect it; otherwise the first entry will 
+	-- be selected.
+	------------------------------------------------------------------------------------
+	if s then LB_Select(fl, s) end;
+end
+
+-------------------------------------------------
+-- RefreshFreeList
+-- On refresh, loads a list with free components
+-- ul: List to load
+-- t: Component type
+-- m: Component list from which to draw entries
+-- b: Button to assign push allowance
+-------------------------------------------------
+function RefreshUsedList (ul, t, m, b)
+	----------------------------------------------------------------------------------
+	-- We cache the text belonging to the current selection in the used list. We then 
+	-- clear the list, and scan through the component's entry list.
+	----------------------------------------------------------------------------------
+	local st, c, s = LB_GetSText(ul), LB_GetSDatum(Main.Comp[t]);
+	LB_Clear(ul);
+	if c then
+		-------------------------------------------------------------------------------
+		-- We add entries into the used list in the order we read them out of the list 
+		-- of entries. If an entry's ID matches the selection, record the iteration.
+		-------------------------------------------------------------------------------
+		local i = 0;
+		for k, v in pairs(c[m]) do
+			if st == k then s = i end;
+			LB_AppendEntry(ul, k, v, true);
+			i = i + 1;
+		end
+	end
+	------------------------------------------------------------------------------------
+	-- If the selection is still available, reselect it; otherwise the first entry will
+	-- will be selected. Enable dragging if entries were available.
+	------------------------------------------------------------------------------------
+	if s then LB_Select(ul, s) end;
+	Button.AllowPush(b, Listbox.GetItemCount(ul) ~= 0);
+end
+
+-------------------------------------------------------
+-- SetupWidgetCore
+-- Sets up the common portion of a widget edit section
+-- t: Component type
+-- fr: Features edit section routine
+-------------------------------------------------------
+function SetupWidgetCore (t, fr)
+	-----------------------------------------------------
+	-- Install the normal buttons and component listbox.
+	-----------------------------------------------------
+	SetupButton("Pictures", .7, .1, .3, .1, EnterPropertyPopup(t, EditPicturesEnter));		
+	SetupButton("Methods", .7, .3, .3, .1, EnterPropertyPopup(t, EditMethodsEnter));
+	SetupButton("Tag / ID", .7, .4, .3, .1, EnterPropertyPopup(t, EditTagAndIDEnter));
+	SetupButton("OK", .7, .9, .3, .1, EnterSection(MainEnter));
+	SetupButton("Features", .7, .6, .3, .1, EnterPropertyPopup(t, fr));		
+	InstallListbox(Main.Comp[t], 2, .05, .1, .2, .1, LB_SelectAndRefresh);
+	SetupListboxUpButton(.25, .1, .05, .05, Main.Comp[t]);
+	SetupListboxDownButton(.25, .15, .05, .05, Main.Comp[t]);
+	-------------------------------------
+	-- Setup the common help text links.
+	-------------------------------------
+	local p = string.format("E%s_", string.sub(t, 1, 1));
+	SetupHelpText(.05, .025, .2, .05, string.format("%s list:", t), string.format("%s%s", p, t), true);
+	SetupHelpText(.7125, .025, .275, .05, string.format("%s pictures", t), string.format("%sPictures", p), true);
+	SetupHelpText(.7125, .225, .275, .05, "Properties", string.format("%sProp", p), true);
+	SetupHelpText(.725, .525, .25, .05, string.format("%s Features", t), string.format("%sFeatures", p), true);
+	----------------------------------------------------------------------
+	-- Load the common widget picture properties for this component type.
+	----------------------------------------------------------------------
+	Main.PicProp[t] = { n = 0 };
+	table.insert(Main.PicProp[t], { s = "Normal", p = "pD" });
+	table.insert(Main.PicProp[t], { s = "Entered", p = "pE" });
+	table.insert(Main.PicProp[t], { s = "Grabbed", p = "pG" });
+	table.insert(Main.PicProp[t], { s = "Outside", p = "pO" });
+end
+
+----------------------------------------------------------
+-- SetupPaneItemCore
+-- Sets up the common portion of a pane item edit section
+-- t: Component type
+-- ds: Delete string
+-- d: Draw routine
+-- pe: Process event routine
+-- fr: Features edit section routine
+----------------------------------------------------------
+function SetupPaneItemCore (t, ds, d, pe, fr)
+	-----------------------------------------------------
+	-- Install the normal buttons and component listbox.
+	-----------------------------------------------------
+	SetupWidgetCore(t, fr);
+	SetupButton("New", .3, .1, .2, .1, NewComponent(t));
+	SetupButton("Delete", .5, .1, .2, .1, DeleteComponent(t, ds));
+	-------------------------------------------
+	-- Setup the display button, if requested.
+	-------------------------------------------
+	if d then
+		local b = PrimeButton();
+		AssignMethodsRaw(b, d, nil, pe, nil);
+		Pane.AddItem(Main.CurP, b, .05, .3, .65, .65);
+	end
+	-------------------------------------
+	-- Setup the common help text links.
+	-------------------------------------
+	local p = string.format("E%s_", string.sub(t, 1, 1));
+	SetupHelpText(.3125, .025, .375, .05, string.format("%s management", t), string.format("%sND", p), false);
+	SetupHelpText(.05, .225, .65, .05, string.format("Current %s", string.lower(t)), string.format("%sCur", p), false);
+end
+
+-------------------------------------
+-- BuildQuestionMarkCursor
+-- Constructs a question mark cursor
+-------------------------------------
+function BuildQuestionMarkCursor ()
+	---------------------------------
+	-- Image data for question mark.
+	---------------------------------
+	local c = {
+		"            XXXX        ",
+		"          XX....XXX     ",
+		"         X........XX    ",
+		"       XX....XXX....XX  ",
+		"      X.....X   XX.....X",
+		"      X....X     XX....X",
+		"      X....X      X....X",
+		"       X....X      X...X",
+		"        X...X      X...X",
+		"         XXX      X....X",
+		"                 X....X ",
+		"                X....X  ",
+		"               X....X   ",
+		"              X....X    ",
+		"             X....X     ",
+		"            X....X      ",
+		"           X....X       ",
+		"           X....X       ",
+		"           X...X        ",
+		"            XXX         ",
+		"                        ",
+		"            XXX         ",
+		"           X...X        ",
+		"            XXX         "
+	};
+	-------------------------------------------------------------------------------------
+	-- Scan through the lines of the image. On each line, reset the bit counter and byte
+	-- values for each datum and mask.
+	-------------------------------------------------------------------------------------
+	local data, mask = { n = 0 }, { n = 0 };
+	for i, r in ipairs(c) do
+		local e, d, m, b = 0, 0, 0;
+		------------------------------------------------------------------------------
+		-- Scan across the line. If the character is "X", mark a white spot. If it is 
+		-- ".", mark a black spot.
+		------------------------------------------------------------------------------
+		for b in string.gfind(r, ".") do
+			d, m = d + d, m + m;
+			if b == "X" then
+				m = SDL.Or(m, 1);
+			elseif b == "." then
+				d, m = SDL.Or(d, 1), SDL.Or(m, 1);
+			end
+			-------------------------------------------------------------------------
+			-- Increment the bit counter. If we have filled a byte, append it to the 
+			-- data and mask lists. Reset the bit counter and datum/mask bytes.
+			-------------------------------------------------------------------------
+			e = e + 1;
+			if e == 8 then
+				table.insert(data, d);
+				table.insert(mask, m);
+				e, d, m = 0, 0, 0;
+			end
+		end
+	end
+	----------------------------------------------------
+	-- Build the cursor from the datum and mask tables.
+	----------------------------------------------------
+	local db = SDL.U8LoadBuffer(1, unpack(data));
+	local mb = SDL.U8LoadBuffer(2, unpack(mask));
+	Main.Cursors.qm = SDL.CreateCursor(db, mb, 24, 24, 0, 0);
+end

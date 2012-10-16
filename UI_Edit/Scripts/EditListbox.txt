@@ -1,0 +1,320 @@
+-------------------------------------------------
+-- EditListboxEnter
+-- Enters the edit listbox section of the editor
+-------------------------------------------------
+function EditListboxEnter ()
+	---------------------------------------------------------------------
+	-- If we have not loaded the edit listbox section, proceed to do so.
+	---------------------------------------------------------------------
+	if not Main.S.EditListbox then
+		-------------------------------------------------
+		-- Create and install the layer and its widgets.
+		-------------------------------------------------
+		SetupSectionTable("EditListbox", 0, 0, 1, 1, false);
+		SetupPaneItemCore("Listbox", "No listboxes to delete.", nil, nil, EditListboxFeaturesEnter);
+		------------------------------
+		-- Setup the listbox display.
+		------------------------------
+		Main.CurT.L = PrimeListbox();
+		W_SetText(Main.CurT.L, Main.T24, 0);
+		MapMethods(Main.CurT.L, "VList", "VList", nil, nil);
+		Listbox.AllowDragOver(Main.CurT.L, false);
+		Pane.AddItem(Main.CurP, Main.CurT.L, .05, .3, .65, .65);
+		---------------------------------------------------
+		-- Load listbox-specific picture property entries.
+		---------------------------------------------------
+		table.insert(Main.PicProp["Listbox"], { s = "I. Normal", p = "pDI" });
+		table.insert(Main.PicProp["Listbox"], { s = "I. Entered", p = "pEI" });
+		table.insert(Main.PicProp["Listbox"], { s = "I. Grabbed", p = "pGI" });
+		table.insert(Main.PicProp["Listbox"], { s = "I. Outside", p = "pOI" });
+		table.insert(Main.PicProp["Listbox"], { s = "I.S. Normal", p = "pDS" });
+		table.insert(Main.PicProp["Listbox"], { s = "I.S. Entered", p = "pES" });
+		table.insert(Main.PicProp["Listbox"], { s = "I.S. Grabbed", p = "pGS" });
+		table.insert(Main.PicProp["Listbox"], { s = "I.S. Outside", p = "pOS" });		
+	end
+	----------------------
+	-- Enter the section.
+	----------------------
+	LoadSectionTable("EditListbox");
+	---------------------------------------
+	-- On entry/refresh, load the listbox.
+	---------------------------------------
+	if Main.Enter[Main.Tier] or Main.Refresh[Main.Tier] then
+		LB_Load(Main.CurT.L, LB_GetSDatum(Main.Comp.Listbox));
+	end
+end
+
+------------------------------------------------------------
+-- EditListboxFeaturesEnter
+-- Enters the edit listbox properties section of the editor
+------------------------------------------------------------
+function EditListboxFeaturesEnter ()
+	--------------------------------------------------------------------------------
+	-- If we have not loaded the edit listbox properties section, proceed to do so.
+	--------------------------------------------------------------------------------
+	if not Main.S.EditListboxFeatures then
+		-------------------------------------------
+		-- Processes events for the cancel button.
+		-------------------------------------------
+		local function _PE_C ()
+			---------------------------------------------------------------------------
+			-- Restore the cached listbox data and the save indicator. Exit the popup.
+			---------------------------------------------------------------------------
+			local l = LB_GetSDatum(Main.Comp.Listbox);
+			RestoreListbox(l, Main.CurT.Data);
+			LB_Load(Main.S.EditListbox.L, l);
+			Main.Save = Main.SaveC;
+			ClosePopup();
+		end
+		---------------------------------------------
+		-- Processes events for the new item button.
+		---------------------------------------------
+		local function _PE_N ()
+			local i, s = { string = "New item", context = 0, bSelected = false }, LB_Selection(Main.CurT.Items);
+			LB_AddEntry(Main.CurT.Items, s + 1, i.string, nil, true);
+			table.insert(LB_GetSDatum(Main.Comp.Listbox).items, s + 1, i);
+			Main.Refresh[Main.Tier], Main.Save = true, true;
+		end
+		------------------------------------------------
+		-- Processes events for the delete item button.
+		------------------------------------------------
+		local function _PE_D ()
+			local s = LB_Selection(Main.CurT.Items);
+			if s ~= 0 then
+				local l = LB_GetSDatum(Main.Comp.Listbox);
+				LB_RemoveEntry(Main.CurT.Items, s);
+				if s < l.offset + 1 or s == l.items.n then
+					if l.offset ~= 0 then l.offset = l.offset - 1 end;
+				end
+				table.remove(l.items, s);
+				Main.Refresh[Main.Tier], Main.Save = true, true;
+			else
+				MessageBox("Sentinel item: cannot delete.");
+			end
+		end
+		------------------------------------------------------
+		-- Processes events for the decrease capacity button.
+		------------------------------------------------------
+		local function _PE_DC ()
+			local l = LB_GetSDatum(Main.Comp.Listbox);
+			if l.capacity ~= 0 then
+				--------------------------------------------------------
+				-- Decrease the capacity, and indicate unsaved changes.
+				--------------------------------------------------------
+				l.capacity, Main.Refresh[Main.Tier], Main.Save = l.capacity - 1, true, true;
+			end
+		end
+		------------------------------------------------------
+		-- Processes events for the increase capacity button.
+		------------------------------------------------------
+		local function _PE_IC ()
+			local l = LB_GetSDatum(Main.Comp.Listbox);
+			--------------------------------------------------------
+			-- Increase the capacity, and indicate unsaved changes.
+			--------------------------------------------------------
+			l.capacity, Main.Refresh[Main.Tier], Main.Save = l.capacity + 1, true, true;
+		end
+		----------------------------------------------------
+		-- Processes events for the decrease offset button.
+		----------------------------------------------------
+		local function _PE_DO ()
+			local l = LB_GetSDatum(Main.Comp.Listbox);
+			if l.offset ~= 0 then
+				------------------------------------------------------
+				-- Decrease the offset, and indicate unsaved changes.
+				------------------------------------------------------
+				l.offset, Main.Refresh[Main.Tier], Main.Save = l.offset - 1, true, true;
+			end
+		end
+		----------------------------------------------------
+		-- Processes events for the increase offset button.
+		----------------------------------------------------
+		local function _PE_IO ()
+			local l = LB_GetSDatum(Main.Comp.Listbox);
+			if l.offset + 1 < l.items.n then
+				------------------------------------------------------
+				-- Increase the offset, and indicate unsaved changes.
+				------------------------------------------------------
+				l.offset, Main.Refresh[Main.Tier], Main.Save = l.offset + 1, true, true;
+			end
+		end
+		------------------------------------------------
+		-- Processes events for the set context button.
+		------------------------------------------------
+		local function _PE_SC ()
+			--------------------------------------------------------------------------
+			-- If the context is a 32-bit integer, assign it to the current item, and
+			-- indicate unsaved changes.
+			--------------------------------------------------------------------------
+			local i = LB_Selection(Main.CurT.Items);
+			if i ~= 0 then
+				local n = TB_GetNumber(Main.CurT.C);
+				if n and n < 2^32 then
+					LB_GetSDatum(Main.Comp.Listbox).items[i].context = n;
+				else
+					MessageBox("Context must be a 32-bit unsigned integer.");
+				end
+			else
+				MessageBox("No item to assign to.");
+			end
+		end
+		--------------------------------------------
+		-- Responds to checkbox allow click toggle.
+		--------------------------------------------
+		local function _ClickT (c)
+			--------------------------------------------------------
+			-- Toggle the click flag, and indicate unsaved changes.
+			--------------------------------------------------------
+			LB_GetSDatum(Main.Comp.Listbox).bClick, Main.Save = c, true;
+		end
+		------------------------------------------------
+		-- Responds to checkbox allow drag over toggle.
+		------------------------------------------------
+		local function _DragOverT (c)
+			-------------------------------------------------------
+			-- Toggle the drag flag, and indicate unsaved changes.
+			-------------------------------------------------------
+			LB_GetSDatum(Main.Comp.Listbox).bDragOver, Main.Save = c, true;	
+		end
+		---------------------------------------------
+		-- Responds to checkbox allow select toggle.
+		---------------------------------------------
+		local function _SelectT (c)
+			---------------------------------------------------------
+			-- Toggle the select flag, and indicate unsaved changes.
+			---------------------------------------------------------
+			local i = LB_Selection(Main.CurT.Items);
+			if i ~= 0 then
+				local l = LB_GetSDatum(Main.Comp.Listbox);
+				l.items[i].bSelected, Main.Refresh[Main.Tier], Main.Save = c, true, true;
+			else
+				Checkbox.Check(Main.CurT.Select, false);
+				MessageBox("No item to select.");
+			end
+		end
+		-----------------------------------------------
+		-- Static text for displaying feature amounts.
+		-----------------------------------------------
+		local function _ST (t, f, x, y, w, h)
+			-----------------------------------------------------------------
+			-- Closure used to display desired property and preferred value.
+			-----------------------------------------------------------------
+			local function _D_ST (n, a, x, y, w, h)
+				DrawString(string.format("%s = %i", t, LB_GetSDatum(Main.Comp.Listbox)[f]), Main.T18, x, y, w, h);
+				Render.DrawBox(x, y, w, h, 1, 1, 1);
+			end
+			-------------------------------------------
+			-- Setup static text as image-less button.
+			-------------------------------------------
+			local b = PrimeButton();
+			AssignMethodsRaw(b, _D_ST, nil, nil, nil);
+			Pane.AddItem(Main.CurP, b, x, y, w, h);
+		end
+		-------------------------------------------------
+		-- Create and install the layer and its widgets.
+		-------------------------------------------------
+		SetupSectionTable("EditListboxFeatures", 0, 0, .6, .8, true);
+		SetupButton("New", .35, .1, .3, .1, PushButton(_PE_N));
+		SetupButton("Delete", .65, .1, .3, .1, PushButton(_PE_D));
+		SetupButton("OK", 0, .9, .3, .1, LeavePopup);
+		SetupButton("Cancel", .3, .9, .3, .1, PushButton(_PE_C));
+		SetupButton("-", .8, .325, .075, .05, PushButton(_PE_DC));
+		SetupButton("+", .875, .325, .075, .05, PushButton(_PE_IC));
+		SetupButton("-", .8, .4, .075, .05, PushButton(_PE_DO));
+		SetupButton("+", .875, .4, .075, .05, PushButton(_PE_IO));
+		SetupButton("Set", .45, .75, .375, .1, PushButton(_PE_SC));
+		SetupCheckbox("Click", .05, .325, .05, .05, ToggleCheckbox(_ClickT));
+		SetupCheckbox("DragOver", .05, .4, .05, .05, ToggleCheckbox(_DragOverT));
+		SetupCheckbox("Select", .475, .475, .05, .05, ToggleCheckbox(_SelectT));		
+		SetupListbox("Items", 3, .05, .1, .2, .2, LB_SelectAndRefresh);
+		SetupListboxUpButton(.25, .1, .05, .1, Main.CurT.Items);
+		SetupListboxDownButton(.25, .2, .05, .1, Main.CurT.Items);
+		SetupTextbox("S", 16, "", .05, .55, .375, .1, true);
+		SetupTextbox("C", 10, "", .05, .75, .375, .1, true);
+		_ST("Capacity", "capacity", .475, .325, .3, .05);
+		_ST("Offset", "offset", .475, .4, .3, .05);
+		------------------------------
+		-- Setup the help text links.
+		------------------------------
+		SetupHelpText(.05, .025, .25, .05, "Items", "EL_Items");
+		SetupHelpText(.35, .025, .6, .05, "Manage items", "EL_ItemND");
+		SetupHelpText(.475, .225, .475, .075, "Capacity / offset", "EL_CO");
+		SetupHelpText(.125, .325, .3, .05, "Clickable", "EL_Click", false);
+		SetupHelpText(.125, .4, .3, .05, "Dragoverable", "EL_DragOver", false);
+		SetupHelpText(.05, .475, .375, .05, "Item text", "EL_ItemText");
+		SetupHelpText(.05, .675, .775, .05, "Item context", "EL_ItemContext");
+		SetupHelpText(.55, .475, .275, .05, "Item selected", "EL_Select", false);
+		--------------------------
+		-- Setup the focus chain.
+		--------------------------
+		Pane.LoadFocusChain(Main.CurP, Main.CurT.S, Main.CurT.C, false);
+	end
+	--------------------
+	-- Enter the popup.
+	--------------------
+	LoadSectionTable("EditListboxFeatures");
+	---------------------------------------------------------------------------------
+	-- On entry, setup the focus chain, prepare the listbox, and allow for a cancel.
+	---------------------------------------------------------------------------------
+	if Main.Enter[Main.Tier] then
+		--------------------------------------------------------
+		-- Install the textbox trap for the edit listbox chain.
+		--------------------------------------------------------
+		TextboxChainPrime(PaneItem.GetPane(Main.CurT.S));
+		----------------------------
+		-- Cache the listbox state. 
+		----------------------------
+		local l = LB_GetSDatum(Main.Comp.Listbox);
+		Main.CurT.Data = CacheListbox(l);
+		--------------------------------------------------------------------
+		-- Setup the checkboxes and listbox to reflect the current listbox.
+		--------------------------------------------------------------------
+		Checkbox.Check(Main.CurT.Click, l.bClick);
+		Checkbox.Check(Main.CurT.DragOver, l.bDragOver);
+		LB_Clear(Main.CurT.Items);
+		LB_AppendEntry(Main.CurT.Items, "", nil, true);
+		for i, v in ipairs(l.items) do
+			LB_AppendEntry(Main.CurT.Items, v.string, nil, false);
+		end
+	end
+	-------------------------------------------------------------
+	-- On entry/refresh, update the item checkbox and textboxes.
+	-------------------------------------------------------------
+	if Main.Enter[Main.Tier] or Main.Refresh[Main.Tier] then
+		local i, l = LB_Selection(Main.CurT.Items), LB_GetSDatum(Main.Comp.Listbox);
+		if i ~= 0 then
+			Checkbox.Check(Main.CurT.Select, l.items[i].bSelected);
+			TB_SetString(Main.CurT.S, l.items[i].string, true);
+			TB_SetString(Main.CurT.C, string.format("%i", l.items[i].context), true);
+			---------------------------------
+			-- Set the item list entry text.
+			---------------------------------
+			LB_SetEText(Main.CurT.Items, i, l.items[i].string);
+		else
+			Checkbox.Check(Main.CurT.Select, false);
+			TB_SetString(Main.CurT.S, "", true);
+			TB_SetString(Main.CurT.C, "", true);
+			LB_Clear(Main.S.EditListbox.L);
+		end
+		-------------------------------
+		-- Update the listbox display.
+		-------------------------------
+		LB_Load(Main.S.EditListbox.L, l);
+	end
+	--------------------------------------------------------------------
+	-- Update the text string; if it differs, indicate unsaved changes.
+	--------------------------------------------------------------------
+	local i = LB_Selection(Main.CurT.Items);
+	if i ~= 0 then
+		local l = LB_GetSDatum(Main.Comp.Listbox);
+		l.items[i].string = TB_GetString(Main.CurT.S);
+		if LB_GetSText(Main.CurT.Items) ~= l.items[i].string then
+			LB_SetEText(Main.CurT.Items, i, l.items[i].string);
+			Main.Save = true;
+			-------------------------------
+			-- Update the listbox display.
+			-------------------------------
+			LB_Load(Main.S.EditListbox.L, l);
+		end
+	end
+end

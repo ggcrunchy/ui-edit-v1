@@ -1,0 +1,398 @@
+-----------------------------------------------
+-- PointInBox
+-- Indicates whether a point lies in a box
+-- px, py: Point coordinates
+-- x, y: Box coordinates
+-- w, h: Box dimensions
+-- Returns: An indication of point containment
+-----------------------------------------------
+function PointInBox (px, py, x, y, w, h)
+	return not (px < x or px >= x + w or py < y or py >= y + h);
+end
+
+-------------------------------------------
+-- SortPairs
+-- Sorts a pair of coordinates
+-- x1, y1: First pair of coordinates
+-- x2, y2: Second pair of coordinates
+-- Returns: The sorted pair of coordinates
+-------------------------------------------
+function SortPairs (x1, y1, x2, y2)
+	if x1 > x2 then
+		x1, x2 = x2, x1;
+	end
+	if y1 > y2 then
+		y1, y2 = y2, y1;
+	end
+	return x1, y1, x2, y2;
+end
+
+-----------------------------------------
+-- ClipBox
+-- Clips a coordinate pair against a box
+-- xC, yC: Coordinates to be clipped
+-- x, y: Upper-left corner of box
+-- w, h: Dimensions of box
+-----------------------------------------
+function ClipBox (xC, yC, x, y, w, h)
+	if xC < x then
+		xC = x;
+	elseif xC > x + w then
+		xC = x + w;
+	end
+	if yC < y then
+		yC = y;
+	elseif yC > y + h then
+		yC = y + h;
+	end
+	return xC, yC;
+end
+
+------------------------------------------
+-- GetTextWidth
+-- Gets the width of a string of text
+-- t: Text set to use
+-- s: String to measure
+-- b: Index from which to begin measuring
+-- e: Index at which to end measuring
+------------------------------------------
+function GetTextWidth (t, s, b, e)
+	local w, l, vW = 0, string.len(s), Render.GetVideoSize();
+	for i = b, e do
+		if i > l then break end;
+		w = w + Render.GetTextSize(t.font, string.sub(s, i, i)) / vW;
+	end
+	return w;
+end
+
+----------------------------------------------------
+-- GetNewID
+-- Gets the first free ID, given a list of used IDs
+-- p: Prefix for IDs
+-- l: Current ID list
+-- Returns: A new ID to use
+----------------------------------------------------
+function GetNewID (p, l)
+	----------------------------------------------------------------------------------
+	-- Iterate from 1 to n, building IDs out of the prefix and the index. If an ID is
+	-- not taken, return it. Note that we are not concerned with the key-value pairs
+	-- obtained in the loop--we only run over them to increment the index.
+	----------------------------------------------------------------------------------
+	local i = 1;
+	for k, v in pairs(l) do
+		local s = string.format("%s%i", p, i);
+		if not l[s] then return s end;
+		i = i + 1;
+	end
+	-------------------------------------------------------------------------
+	-- If all of the previous tries were taken, the "n + 1" ID will be free.
+	-------------------------------------------------------------------------
+	return string.format("%s%i", p, i);
+end
+
+--------------------------------
+-- MessageBox
+-- Launches a message box popup
+-- m: Message to display
+--------------------------------
+function MessageBox (m)
+	----------------------------------------------------
+	-- Provide a display message, and launch the popup.
+	----------------------------------------------------
+	Main.Msg = m;
+	OpenPopup(MessageBoxEnter);
+end
+
+-------------------------------
+-- OKCancel
+-- Launches an OK/Cancel popup
+-- m: Message to display
+-- c: Condition to OK/Cancel
+-------------------------------
+function OKCancel (m, c)
+	---------------------------------------------------------------------------------
+	-- Provide a display message, put the condition on "Wait", and launch the popup.
+	---------------------------------------------------------------------------------
+	Main.Msg, Main.CurCond, Main.Cond[c] = m, c, "Wait";
+	OpenPopup(OKCancelEnter);
+end
+
+----------------------------
+-- Help
+-- Launches a help popup
+-- he: Help entry to lookup
+----------------------------
+function Help (he)
+	-----------------------------------------------
+	-- Cache the lookup key, and launch the popup.
+	-----------------------------------------------
+	Main.Msg = he;
+	OpenPopup(HelpEnter);
+end
+
+------------------------------
+-- RegisterComponent
+-- Registers a user component
+-- t: Component type
+-- id: ID to assign
+------------------------------
+function RegisterComponent (t, id)
+	-------------------------------------------------------------------------------------
+	-- Load a new default component of the given type, mark it as said type, and give it
+	-- no tag to begin with.
+	-------------------------------------------------------------------------------------
+	local c = Main.ND[t].n();
+	c.type, c.tag = t, "";
+	------------------------------------------------------------
+	-- Figure out which list we will be using--layer or widget.
+	------------------------------------------------------------
+	local l = Main.W;
+	if t == "Layer" then l = Main.L end;
+	------------------------------------------------------------
+	-- If no ID was provided, construct a default component ID.
+	------------------------------------------------------------
+	if not id then id = GetNewID(t, l.ids) end;
+	--------------------------------------------------------------------------------
+	-- Append the component and offset the listbox to it. ID it in the proper list.
+	--------------------------------------------------------------------------------
+	LB_AppendEntry(Main.Comp[t], id, c, true);
+	l.ids[id] = c;
+	----------------------------------------
+	-- Indicate that the scene has changed.
+	----------------------------------------
+	Main.Save = true;
+end
+
+--------------------------------
+-- UnregisterComponent
+-- Unregisters a user component
+-- t: Component type
+-- i: Index of component
+--------------------------------
+function UnregisterComponent (t, i)
+	------------------------------------
+	-- Unload the component properties.
+	------------------------------------
+	Main.ND[t].d(i);
+	----------------------------------------------
+	-- Remove the name from the appropriate list. 
+	----------------------------------------------
+	local l = Main.W;
+	if t == "Layer" then l = Main.L end;
+	l.ids[LB_GetEText(Main.Comp[t], i)] = nil;
+	----------------------------------------------------------
+	-- Remove the component and update the listbox entry indices.
+	----------------------------------------------------------
+	LB_RemoveEntry(Main.Comp[t], i);
+	----------------------------------------
+	-- Indicate that the scene has changed.
+	----------------------------------------
+	Main.Save = true;
+end
+
+---------------------------
+-- GetComponent
+-- Gets a user component
+-- t: Component type
+-- id: Component ID
+-- Returns: User component
+---------------------------
+function GetComponent (t, id)
+	local l = Main.W;
+	if t == "Layer" then l = Main.L end;
+	return l.ids[id];
+end
+
+--------------------------------------------------
+-- IsComponentIDUsed
+-- Indicates whether an ID is used by a component
+-- t: Component type
+-- ci: Component ID
+-- Returns: A boolean indicating use
+--------------------------------------------------
+function IsComponentIDUsed (t, ci)
+	------------------------------------------------------------
+	-- Figure out which list we will be using--layer or widget. 
+	------------------------------------------------------------
+	local l = Main.W;
+	if t == "Layer" then l = Main.L end;
+	--------------------------------------------------
+	-- Indicate whether the ID indexes a valid entry.
+	--------------------------------------------------
+	return l.ids[ci] ~= nil;
+end
+
+--------------------------------------------------
+-- IsComponentTagUsed
+-- Indicates whether a tag is used by a component
+-- t: Component type
+-- ct: Component tag
+-- Returns: A boolean indicating use
+--------------------------------------------------
+function IsComponentTagUsed (t, ct)
+	------------------------------------------------------------
+	-- Figure out which list we will be using--layer or widget. 
+	------------------------------------------------------------
+	local l = Main.W;
+	if t == "Layer" then l = Main.L end;
+	---------------------------------------------------
+	-- Indicate whether the tag indexes a valid entry.
+	---------------------------------------------------
+	return l.tags[ct] ~= nil;
+end
+
+----------------------------
+-- ChangeComponentID
+-- Changes a component's ID
+-- t: Component type
+-- id: Component ID
+-- ni: New ID
+----------------------------
+function ChangeComponentID (t, id, ni)
+	------------------------------------------------
+	-- Trivially succeed if the ID will not change.
+	------------------------------------------------
+	if id == ni then return end;
+	----------------------------------------------------
+	-- Invoke the appropriate component change routine.
+	----------------------------------------------------
+	if t == "Layer" then
+		ChangeLayerID(id, ni);
+	elseif t == "Pane" then
+		ChangePaneID(id, ni);
+	else
+		ChangePaneItemID(id, ni);
+	end
+end
+
+-----------------------------
+-- ChangeComponentTag
+-- Changes a component's tag
+-- t: Component type
+-- id: Component ID
+-- nt: New tag
+-----------------------------
+function ChangeComponentTag (t, id, nt)
+	-------------------------------------------------------------------------------
+	-- Figure out which list we will be using--layer or widget. Get the component.
+	-------------------------------------------------------------------------------
+	local l, c = Main.W, GetComponent(t, id);
+	if t == "Layer" then l = Main.L end;
+	-------------------------------------------------------------------------
+	-- Check whether the tag is in use. If so, untag the component using it.
+	-------------------------------------------------------------------------
+	if l.tags[nt] then
+		l.ids[l.tags[nt]].tag = "";
+	end
+	----------------------------------------------------------------------------------
+	-- Remove the component's current tag from the list, and add the new tag if it is 
+	-- not empty. Tag the component with the new tag.
+	----------------------------------------------------------------------------------
+	l.tags[c.tag], c.tag = nil, nt;
+	if nt ~= "" then
+		l.tags[nt] = id;
+	end
+end
+
+-------------------------------------
+-- Printf
+-- Used to print a formatted message
+-- s: Format string
+-- arg(...): Arguments to string
+-------------------------------------
+function Printf (s, ...)
+	Message.Print(string.format(s, unpack(arg)));
+end
+
+---------------------------------------
+-- _OT
+-- Print contents of an ordered table
+-- t: Table to print
+-- s: Spaces to indent before printing
+---------------------------------------
+function _OT (t, s)
+	for i, v in ipairs(t) do
+		local ty = type(v);
+		if ty == "number" then
+			Printf("%s%i: %f", s, i, v);
+		elseif ty == "string" then
+			Printf("%s%i: %s", s, i, v);
+		elseif ty == "userdata" then
+			Printf("%s%i: userdata", s, i);
+		elseif ty == "function" then
+			Printf("%s%i: function", s, i);
+		elseif ty == "boolean" then
+			if v then
+				Printf("%s%i: true", s, i);
+			else
+				Printf("%s%i: false", s, i);
+			end
+		elseif ty == "table" then
+			Printf("%s%i", s, i);
+			if v.n then
+				_OT(v, string.format("%s  ", s));
+			else
+				_NT(v, string.format("%s  ", s));
+			end
+			Printf("%s/%i", s, i);
+		elseif ty == "thread" then
+			Printf("%s%i: thread", s, i);
+		end
+	end
+end
+
+---------------------------------------
+-- _NT
+-- Print contents of a normal table
+-- t: Table to print
+-- s: Spaces to indent before printing
+---------------------------------------
+function _NT (t, s)
+	local c = 1;
+	for e, v in pairs(t) do
+		local k = e;
+		if type(k) ~= "string" then
+			k = string.format("#%i", c);
+		end
+		local ty = type(v);
+		if ty == "number" then
+			Printf("%s%s: %f", s, k, v);
+		elseif ty == "string" then
+			Printf("%s%s: %s", s, k, v);
+		elseif ty == "userdata" then
+			Printf("%s%s: userdata", s, k);
+		elseif ty == "function" then
+			Printf("%s%s: function", s, k);
+		elseif ty == "boolean" then
+			if v then
+				Printf("%s%s: true", s, k);
+			else
+				Printf("%s%s: false", s, k);
+			end
+		elseif ty == "table" then
+			Printf("%s%s", s, k);
+			if v.n then
+				_OT(v, string.format("%s  ", s));
+			else
+				_NT(v, string.format("%s  ", s));
+			end
+			Printf("%s/%s", s, k);
+		elseif ty == "thread" then
+			Printf("%s%s: thread", s, k);
+		end
+		c = c + 1;
+	end
+end
+	
+-----------------------------
+-- DumpTable
+-- Used to print out a table
+-- t: Table to print
+-----------------------------
+function DumpTable (t)
+	if t.n then
+		_OT(t, "");
+	else
+		_NT(t, "");
+	end
+end

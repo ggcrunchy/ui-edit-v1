@@ -1,0 +1,249 @@
+--------------------------------------------------
+-- PrimeButton
+-- Creates and primes a button and its properties
+-- Returns: Name used to reference button
+--------------------------------------------------
+function PrimeButton ()
+	local b = Button.Create();
+	Main.WP[b] = {};
+	return b;
+end
+
+----------------------------------
+-- SetupButton
+-- General button setup procedure
+-- s: String to assign to button
+-- x, y: Button coordinates
+-- w, h: Button dimensions
+-- pe: Process event method
+----------------------------------
+function SetupButton (s, x, y, w, h, pe)
+	local b = PrimeButton();
+	W_SetPictures(b, Main.P.B_n, Main.P.B_o, Main.P.B_g, Main.P.B_e);
+	W_SetText(b, Main.T24, .25);
+	B_SetString(b, s);
+	RegisterProcessEventMethod(pe, pe, nil);
+	MapMethods(b, "Button", nil, pe, nil);
+	Pane.AddItem(Main.CurP, b, x, y, w, h);
+end
+
+---------------------------------------------------------------------
+-- PushButton
+-- Builds a closure that calls a routine when the button is released
+-- r: Routine to call on release
+-- Returns: The closure for the button
+---------------------------------------------------------------------
+function PushButton (r)
+	return function (n, e, a)
+		if e == Widget.ButtonRelease and Widget.IsEntered(n) then r() end;	
+	end
+end
+
+----------------------------------------------------------
+-- SetupHelpText
+-- Setup for a static text button that links to help text
+-- x, y: Button coordinates
+-- w, h: Button dimensions
+-- s: Text string
+-- he: Help entry to which button refers
+-- st: Boolean indicating request for static text
+----------------------------------------------------------
+function SetupHelpText (x, y, w, h, s, he, st)
+	------------------------------------------------------------------------------------
+	-- Turn the cursor into a question mark while hovering over the help text, and open
+	-- a help dialog if the text is 
+	----------------------
+	local function _PE (n, e, a)
+		if e == Widget.WidgetEnter then
+			SDL.SetCursor(Main.Cursors.qm);
+		elseif e == Widget.WidgetLeave and not Button.IsPushed(n) then
+			SDL.SetCursor(Main.Cursors.std);
+		elseif e == Widget.ButtonRelease then
+			if Widget.IsEntered(n) then Help(he) end;
+			SDL.SetCursor(Main.Cursors.std);
+		end	
+	end
+	-----------------------------------------------
+	-- Install a button with the appropriate link.
+	-----------------------------------------------
+	local b = PrimeButton();
+	W_SetText(b, Main.T24, .05);
+	B_SetString(b, s);
+	RegisterProcessEventMethod(_PE, _PE, nil);
+	if st then
+		MapMethods(b, "Static", nil, _PE, nil);
+	else
+		MapMethods(b, "Button", nil, _PE, nil);
+	end
+	Pane.AddItem(Main.CurP, b, x, y, w, h);	
+end
+
+------------------------------------------------
+-- SetupListboxUpButton
+-- Setup for a button that scrolls a listbox up
+-- x, y: Button coordinates
+-- w, h: Button dimensions
+-- l: The listbox to scroll up
+------------------------------------------------
+function SetupListboxUpButton (x, y, w, h, l)
+	---------------------------------------------
+	-- Closure used to scroll target listbox up.
+	---------------------------------------------
+	local function _SU ()
+		local i = Listbox.GetOffset(l);
+		if i ~= 0 then
+			Listbox.SetOffset(l, i - 1);
+		end
+	end
+	---------------------------------------------------------
+	-- Bind the button to the listbox, and setup properties.
+	---------------------------------------------------------
+	local b, m = PrimeButton(), PushButton(_SU);
+	W_SetPictures(b, Main.P.B_nlu, Main.P.B_olu, Main.P.B_glu, Main.P.B_elu);
+	RegisterProcessEventMethod(m, m, nil);
+	MapMethods(b, "Button", nil, m, nil);
+	Pane.AddItem(Main.CurP, b, x, y, w, h);
+end
+
+--------------------------------------------------
+-- SetupListboxDownButton
+-- Setup for a button that scrolls a listbox down
+-- x, y: Button coordinates
+-- w, h: Button dimensions
+-- l: The listbox to scroll down
+--------------------------------------------------
+function SetupListboxDownButton (x, y, w, h, l)
+	-----------------------------------------------
+	-- Closure used to scroll target listbox down.
+	-----------------------------------------------
+	local function _SD ()
+		local i = Listbox.GetOffset(l);
+		if i + 1 ~= Listbox.GetItemCount(l) then
+			Listbox.SetOffset(l, i + 1);
+		end
+	end
+	---------------------------------------------------------
+	-- Bind the button to the listbox, and setup properties.
+	---------------------------------------------------------
+	local b, m = PrimeButton(), PushButton(_SD);
+	W_SetPictures(b, Main.P.B_nld, Main.P.B_old, Main.P.B_gld, Main.P.B_eld);
+	RegisterProcessEventMethod(m, m, nil);
+	MapMethods(b, "Button", nil, m, nil);
+	Pane.AddItem(Main.CurP, b, x, y, w, h);
+end
+
+--------------------------------------
+-- B_SetString
+-- Sets the string for a given button
+-- n: Name used to reference button
+-- s: String to assign
+--------------------------------------
+function B_SetString (n, s)
+	Main.WP[n].s = s;
+end
+
+--------------------------------------
+-- B_GetString
+-- Gets the string for a given button
+-- n: Name used to reference button
+-- Returns: The button's string
+--------------------------------------
+function B_GetString (n)
+	return Main.WP[n].s;
+end
+
+------------------------------------------------
+-- NewButton
+-- Builds a user button with default properties
+-- Returns: The new button
+------------------------------------------------
+function NewButton ()
+	return { 
+		bPush = true,	-- Allow push
+		string = "",	-- String
+		m = { D = "Button", HT = "Default", PE = "NOP", F = "NOP" },-- Methods
+		pD = {}, pO = {}, pG = {}, pE = {}	-- Pictures
+	};
+end
+
+-------------------------
+-- DeleteButton
+-- Unloads a user button
+-- b: Index of button
+-------------------------
+function DeleteButton (b)
+	---------------------------------------
+	-- Remove the basic widget properties.
+	---------------------------------------
+	local wp = LB_GetEDatum(Main.Comp.Button, b);
+	UnregisterWidget(wp);
+end
+
+------------------------------------
+-- SaveButton
+-- Saves a user button
+-- f: File to which button is saved
+-- b: Button properties
+------------------------------------
+function SaveButton (f, b)
+	SaveMethods(f, b, false);
+	SaveBooleans(f, b, { "bPush" });
+	SaveStrings(f, b, { "string" });
+	SaveWidget(f, b);
+end
+
+--------------------------------------
+-- LoadButtons
+-- Loads user buttons from a data set
+-- ld: Loading data
+--------------------------------------
+function LoadButtons (ld)
+	-----------------------------------------------------------------------------------
+	-- If the button list is non-empty, run through it, register a new button for each
+	-- entry, and acquire the button for loading.
+	-----------------------------------------------------------------------------------
+	if not ld.b.Button then return end;
+	for i, v in ipairs(ld.b.Button) do
+		RegisterComponent("Button", v.ID);
+		local d = LB_GetEDatum(Main.Comp.Button, i - 1);
+		--------------------------------
+		-- Load required button fields.
+		--------------------------------
+		d.m = v.m;
+		--------------------------------
+		-- Load optional button fields.
+		--------------------------------
+		if v.tag then d.tag = v.tag end;
+		if v.bPush ~= nil then d.bPush = v.bPush end;
+		if v.string then d.string = v.string end;
+		-------------------------
+		-- Load button pictures.
+		-------------------------
+		LoadPictures(d, v, { "pD", "pO", "pG", "pE" });
+	end
+end
+
+-----------------------------------------------
+-- InstallTestButtons
+-- Installs test buttons from the user buttons
+-----------------------------------------------
+function InstallTestButtons ()
+	----------------------------------------------------
+	-- Create concrete buttons out of all user buttons.
+	----------------------------------------------------
+	for i, t, b in LB_Range(Main.Comp.Button) do
+		---------------------------------------------
+		-- Generate a new button and store its name.
+		---------------------------------------------
+		Main.W.names[t] = PrimeButton();
+		--------------------------------------------------------
+		-- Assign all user-configured properties to the button.
+		--------------------------------------------------------
+		W_SetText(Main.W.names[t], Main.T24, .25);
+		W_SetPictures(Main.W.names[t], b.pD.p, b.pO.p, b.pG.p, b.pE.p);
+		B_SetString(Main.W.names[t], b.string);
+		MapMethods(Main.W.names[t], b.m.D, b.m.HT, b.m.PE, b.m.F);
+		Button.AllowPush(Main.W.names[t], b.bPush);
+		Widget.SetTag(Main.W.names[t], b.tag);
+	end
+end

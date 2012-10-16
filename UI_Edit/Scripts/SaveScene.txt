@@ -1,0 +1,121 @@
+---------------------------------------------
+-- SaveSceneEnter
+-- Enters the save scene popup of the editor
+---------------------------------------------
+function SaveSceneEnter ()
+	-----------------------------------------------------------------
+	-- If we have not loaded the save scene popup, proceed to do so.
+	-----------------------------------------------------------------
+	if not Main.S.SaveScene then	
+		-----------------------------------------
+		-- Processes events for the save button.
+		-----------------------------------------
+		local function _PE_S ()
+			---------------------------
+			-- Task to save the scene.
+			---------------------------
+			local function _T_Save ()
+				---------------------------------------------------------------------
+				-- If allowed to save, do so and discard this task. If told to wait,
+				-- keep the task around. Otherwise, get rid of the task.
+				---------------------------------------------------------------------
+				if Main.Cond["S"] == "Do" then
+					----------------------------------------
+					-- Load a file from the textbox string.
+					----------------------------------------
+					local n = string.format("Scenes/%s.sce", TB_GetString(Main.S.SaveScene.F));
+					local f = io.open(n, "w");
+					if f then
+						-------------------------
+						--
+						-------------------------
+						-- SaveScripts(f);
+						--------------------------------------
+						-- Load all components into the file.
+						--------------------------------------
+						SaveComponentList(f, "Button", SaveButton);
+						SaveComponentList(f, "Slider", SaveSlider);
+						SaveComponentList(f, "Listbox", SaveListbox);
+						SaveComponentList(f, "Textbox", SaveTextbox);
+						SaveComponentList(f, "Checkbox", SaveCheckbox);
+						SaveComponentList(f, "Radiobox", SaveRadiobox);
+						SaveComponentList(f, "Pane", SavePane);
+						SaveComponentList(f, "Layer", SavePaneLayer);
+						---------------------------------
+						-- Load the frame into the file.
+						---------------------------------
+						SaveFrame(f);
+						------------------------------------------------------
+						-- Close up, and indicate that all changes are saved.
+						------------------------------------------------------
+						f:close();
+						Main.Save = false;
+					else
+						MessageBox("Could not save file.");
+					end	
+				elseif Main.Cond["S"] == "Wait" then
+					return false;
+				end
+				return true;
+			end
+			----------------------------------------------------------------------
+			-- Install the save task. If we have unsaved changes, prompt the user 
+			-- with an OK/Cancel popup.
+			----------------------------------------------------------------------
+			local s = TB_GetString(Main.CurT.F);
+			if s ~= "" then
+				Main.Cond["S"] = "Do";
+				PrependTask(_T_Save);
+				if Main.CurT.Data[string.format("Scenes/%s.sce", s)] then
+					OKCancel("File already exists. Save anyway?", "S");
+				end
+			else
+				MessageBox("Please provide a filename.");
+			end
+		end
+		-------------------------------------------------
+		-- Create and install the layer and its widgets.
+		-------------------------------------------------
+		SetupSectionTable("SaveScene", 0, 0, .5, .4, true);
+		SetupButton("Save", .725, .225, .25, .2, PushButton(_PE_S));
+		SetupButton("OK", 0, .8, .35, .2, LeavePopup);
+		SetupListbox("SL", 2, .45, .65, .35, .3, LB_SelectNoRefresh);
+		SetupListboxUpButton(.85, .65, .1, .15, Main.CurT.SL);
+		SetupListboxDownButton(.85, .8, .1, .15, Main.CurT.SL);
+		SetupTextbox("F", 16, "", .05, .225, .65, .2, true);
+		--------------------------
+		-- Setup the focus chain.
+		--------------------------
+		Pane.LoadFocusChain(Main.CurP, Main.CurT.F, false);
+	end
+	--------------------
+	-- Enter the popup.
+	--------------------
+	LoadSectionTable("SaveScene");
+	-----------------------------------------------------------
+	-- On entry, prepare the focus chain and load the textbox.
+	-----------------------------------------------------------
+	if Main.Enter[Main.Tier] then
+		------------------------------------------------------
+		-- Install the textbox trap for the save scene chain.
+		------------------------------------------------------
+		TextboxChainPrime(PaneItem.GetPane(Main.CurT.F));
+		------------------------------------------------
+		-- Load the file for the current scene, if any.
+		------------------------------------------------
+		local s = LB_GetSText(Main.CurT.SL);
+		if s then TB_SetString(Main.CurT.F, s, true) end;
+	end
+	------------------------------------------------
+	-- On entry/refresh, update the list of scenes.
+	------------------------------------------------
+	if Main.Enter[Main.Tier] or Main.Refresh[Main.Tier] then
+		---------------------------------------------------------
+		-- Build a list of save files, and build the scene list.
+		---------------------------------------------------------
+		Main.CurT.Data = {};
+		for i, t in ipairs(ScanFolder("Scenes")) do
+			Main.CurT.Data[t] = true;
+		end
+	end
+end

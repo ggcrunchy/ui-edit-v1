@@ -1,0 +1,392 @@
+------------------------------------------------
+-- PrimePane
+-- Creates and primes a pane and its properties
+-- Returns: Name used to reference pane
+------------------------------------------------
+function PrimePane ()
+	local p = Pane.Create();
+	Main.WP[p] = {};
+	return p;
+end
+
+---------------------------------
+-- SetupPane
+-- General pane setup procedure
+-- x, y: Button coordinates
+-- w, h: Button dimensions
+-- p: Popup boolean
+---------------------------------
+function SetupPane (x, y, w, h, p)
+	Main.CurP = PrimePane();
+	W_SetProperty(Main.CurP, "pD", Main.P.black);
+	Pane.AllowDrag(Main.CurP, p);
+	if p then
+		MapMethods(Main.CurP, "Pane", nil, "Pane", "Pane");
+	end
+	PaneLayer.AddPane(Main.CurT.PL, Main.CurP, x, y, w, h);
+end
+
+------------------------------------
+-- P_GetFocus
+-- Gets the current pane focus item
+-- p: Name used to reference pane
+-- Returns: Name of focus
+------------------------------------
+function P_GetFocus (p)
+	return Pane.GetFocusChainItem(p, Pane.GetFocusSlot(p));
+end
+
+------------------------------------
+-- P_SetFocus
+-- Sets the current pane focus item
+-- p: Name used to reference pane
+-- s: Slot to set as focus
+------------------------------------
+function P_SetFocus (p, s)
+	local t = P_GetFocus(p);
+	-------------------------------------------------------------------------------------
+	-- If a command was passed instead of a slot index, get the index appropriate to it.
+	-------------------------------------------------------------------------------------
+	if s == "Prior" then
+		s = Pane.GetFocusPriorSlot(p);
+	elseif s == "Next" then
+		s = Pane.GetFocusNextSlot(p);
+	end
+	----------------------------------------------------------------------------------
+	-- If we do not want to keep our focus, assign the new slot, remove the selection 
+	-- from the old focus and indicate visibly that is no longer has focus, and get 
+	-- the new focus item.
+	----------------------------------------------------------------------------------
+	if s ~= "Cur" then
+		Pane.SetFocusSlot(p, s);
+		Textbox.RemoveSelection(t);
+		W_SetProperty(t, "pD", nil);
+		t = P_GetFocus(p);
+	end
+	------------------------------------------
+	-- Indicate visibly which item has focus.
+	------------------------------------------
+	W_SetProperty(t, "pD", Main.P.purple);
+end
+
+----------------------------------------------
+-- NewButton
+-- Builds a user pane with default properties
+-- Returns: The new pane
+----------------------------------------------
+function NewPane (i)
+	return { 
+		items = {},	-- List of items in pane
+		focus = { n = 0 },	-- Focus chain
+		bDrag = true,	-- Allow drag
+		bBackOnDelete = false,	-- Migrate forward in chain if focus is deleted
+		m = { D = "Default", HT = "Default", PE = "NOP", F = "NOP" },	-- Methods
+		pD = {}, pO = {}, pG = {}, pE = {}	-- Pictures
+	};
+end
+
+-----------------------
+-- DeletePane
+-- Unloads a user pane
+-- p: Index of pane
+-----------------------
+function DeletePane (p)
+	local pt, pd = LB_GetEntry(Main.Comp.Pane, p);
+	--------------------------------------
+	-- Remove all references to the pane.
+	--------------------------------------
+	RemovePaneFromLayer(pt);
+	---------------------------------------
+	-- Remove the basic widget properties.
+	---------------------------------------
+	UnregisterWidget(pd);
+end
+
+----------------------------------
+-- SavePane
+-- Saves a user pane
+-- f: File to which pane is saved
+-- p: Pane properties
+----------------------------------
+function SavePane (f, p)
+	local c = 0;
+	for k, v in pairs(p.items) do c = c + 1 end;
+	f:write(string.format("\t<nItem>%i</nItem>\n", c));
+	for k, v in pairs(p.items) do
+		SavePaneItem(f, k);
+	end
+	f:write(string.format("\t<nFocus>%i</nFocus>\n", p.focus.n));
+	for i, v in ipairs(p.focus) do
+		f:write(string.format("\t<focus>\"%s\"</focus>\n", v));
+	end
+	SaveMethods(f, p, true);
+	SaveBooleans(f, p, { "bDrag", "bBackOnDelete" });
+	SaveWidget(f, p);
+end
+
+-----------------------------------------
+-- SavePaneItem
+-- Saves data needed to load a pane item
+-- f: File handle
+-- pi: Pane item ID
+-----------------------------------------
+function SavePaneItem (f, pi)
+	f:write("\t<PI>\n");
+	f:write(string.format("\t\t<ID>\"%s\"</ID>\n", pi));
+	local PI = GetPaneItem(pi);
+	f:write(string.format("\t\t<x>%f</x>\n", PI.x));
+	f:write(string.format("\t\t<y>%f</y>\n", PI.y));
+	f:write(string.format("\t\t<w>%f</w>\n", PI.w));
+	f:write(string.format("\t\t<h>%f</h>\n", PI.h));
+	f:write("\t</PI>\n");
+end
+
+----------------------------
+-- ChangePaneID
+-- Changes a user pane's ID
+-- pi: ID used by pane
+-- ni: New ID to assign
+----------------------------
+function ChangePaneID (pi, ni)
+	local P = GetPane(pi);
+	----------------------------------------------
+	-- Change the ID in the pane component list.
+	----------------------------------------------
+	for i, s, p in LB_Range(Main.Comp.Pane) do
+		if pi == s then
+			LB_SetEText(Main.Comp.Pane, i, ni);
+			break;
+		end
+	end
+	--------------------------------------------------------------------
+	-- If the pane belongs to a layer, change the ID of its pane entry.
+	--------------------------------------------------------------------
+	if P.layer then
+		P.layer.panes[pi], P.layer.panes[ni] = nil, P;
+	end
+	-----------------------------------------------------------------------
+	-- Remove the pane's current ID from the list, and put the new one in.
+	-----------------------------------------------------------------------
+	Main.W.ids[pi], Main.W.ids[ni] = nil, P;
+	-----------------------------------------------------------
+	-- If the pane is tagged, update its tag with the new ID.
+	-----------------------------------------------------------
+	if P.tag ~= "" then
+		Main.W.tags[P.tag] = ni;
+	end
+end
+
+---------------------------------
+-- ChangePaneItemID
+-- Changes a user pane item's ID
+-- ii: ID used by item
+-- ni: New ID to assign
+---------------------------------
+function ChangePaneItemID (ii, ni)
+	local PI = GetPaneItem(ii);
+	-----------------------------------------------
+	-- Change the ID in the item's component list.
+	-----------------------------------------------
+	for i, s, p in LB_Range(Main.Comp[PI.type]) do
+		if ii == s then
+			LB_SetEText(Main.Comp[PI.type], i, ni);
+			break;
+		end
+	end
+	-------------------------------------------------------------------------------
+	-- If the item belongs to a pane, change the ID of its item and focus entries.
+	-------------------------------------------------------------------------------
+	if PI.pane then
+		PI.pane.items[ii], PI.pane.items[ni] = nil, PI;
+		for i, v in ipairs(PI.pane.focus) do
+			if v == ii then
+				PI.pane.focus[i] = ni;
+				break;
+			end
+		end
+	end
+	-----------------------------------------------------------------------
+	-- Remove the item's current ID from the list, and put the new one in.
+	-----------------------------------------------------------------------
+	Main.W.ids[ii], Main.W.ids[ni] = nil, PI;
+	----------------------------------------------------------
+	-- If the item is tagged, update its tag with the new ID.
+	----------------------------------------------------------
+	if PI.tag ~= "" then
+		Main.W.tags[PI.tag] = ni;
+	end
+end
+
+----------------------------------
+-- GetPane
+-- Gets a user pane, given its ID
+-- p: ID used by pane
+-- Returns: Pane component
+----------------------------------
+function GetPane (p)
+	return GetComponent("Pane", p);
+end
+
+---------------------------------------
+-- GetPaneItem
+-- Gets a user pane item, given its ID
+-- pi: ID used by pane item
+-- Returns: Pane item component
+---------------------------------------
+function GetPaneItem (pi)
+	return Main.W.ids[pi];
+end
+
+-----------------------------------------
+-- RemovePaneFromLayer
+-- Removes a user pane from a user layer
+-- p: ID used by pane
+-----------------------------------------
+function RemovePaneFromLayer (p)
+	local P = GetPane(p);
+	if P.layer then
+		P.layer.panes[p] = nil;
+		P.layer = nil;
+	end
+end
+
+-----------------------------------------
+-- AddPaneItemToPane
+-- Binds a user pane item to a user pane
+-- p: ID used by pane
+-- pi: ID used by pane item
+-- x, y: Pane item coordinates
+-- w, h: Pane item dimensions
+-----------------------------------------
+function AddPaneItemToPane (p, pi, x, y, w, h)
+	local P, PI = GetPane(p), GetPaneItem(pi);
+	PI.x, PI.y, PI.w, PI.h, PI.pane = x, y, w, h, P;
+	P.items[pi] = PI;
+end
+
+---------------------------------------------
+-- RemovePaneItemFromPane
+-- Removes a user pane item from a user pane
+-- pi: ID used by pane item
+---------------------------------------------
+function RemovePaneItemFromPane (pi)
+	RemovePaneItemFromFocusChain(pi);
+	local PI = GetPaneItem(pi);
+	if PI.pane then
+		PI.pane.items[pi] = nil;
+		PI.pane = nil;
+	end
+end
+
+------------------------------------------------------
+-- AddPaneItemToFocusChain
+-- Adds a user pane item into a user pane focus chain
+-- pi: ID used by pane item
+-- i: Index at which to add
+------------------------------------------------------
+function AddPaneItemToFocusChain (pi, i)
+	local PI = GetPaneItem(pi);
+	if PI.pane then
+		table.insert(PI.pane.focus, i, pi);
+	end
+end
+
+---------------------------------------------
+-- RemovePaneItemFromFocusChain
+-- Removes a user pane item from a user pane
+-- pi: ID used by pane item
+---------------------------------------------
+function RemovePaneItemFromFocusChain (pi)
+	local PI = GetPaneItem(pi);
+	if PI.pane then
+		for i, v in ipairs(PI.pane.focus) do
+			if v == pi then
+				table.remove(PI.pane.focus, i);
+				return;
+			end
+		end
+	end
+end
+
+------------------------------------
+-- LoadPanes
+-- Loads user panes from a data set
+-- ld: Loading data
+------------------------------------
+function LoadPanes (ld)
+	-------------------------------------------------------------------------------
+	-- If the pane list is non-empty, run through it, register a new pane for each 
+	-- entry, and acquire the pane for loading.
+	-------------------------------------------------------------------------------
+	if not ld.b.Pane then return end;
+	for i, v in ipairs(ld.b.Pane) do
+		RegisterComponent("Pane", v.ID);
+		local d = LB_GetEDatum(Main.Comp.Pane, i - 1);
+		------------------------------
+		-- Load required pane fields.
+		------------------------------
+		d.m = v.m;
+		------------------------------
+		-- Load optional pane fields.
+		------------------------------
+		if v.tag then d.tag = v.tag end;
+		if v.bDrag ~= nil then d.bDrag = v.bDrag end;
+		if v.bBackOnDelete ~= nil then d.bBackOnDelete = v.bBackOnDelete end;
+		-----------------------
+		-- Load pane pictures.
+		-----------------------
+		LoadPictures(d, v, { "pD", "pO", "pG", "pE" });
+		------------------------------------
+		-- Load pane items and focus chain.
+		------------------------------------
+		if v.PI then
+			for i, pi in ipairs(v.PI) do
+				AddPaneItemToPane(v.ID, pi.ID, pi.x, pi.y, pi.w, pi.h);
+			end
+		end
+		if v.focus then
+			for i, fi in ipairs(v.focus) do
+				AddPaneItemToFocusChain(fi, i);
+			end
+		end
+	end
+end
+
+-------------------------------------------
+-- InstallTestPanes
+-- Installs test panes from the user panes
+-------------------------------------------
+function InstallTestPanes ()
+	------------------------------------------------
+	-- Create concrete panes out of all user panes.
+	------------------------------------------------
+	for i, t, p in LB_Range(Main.Comp.Pane) do
+		-------------------------------------------
+		-- Generate a new pane and store its name.
+		-------------------------------------------
+		Main.W.names[t] = PrimePane();
+		------------------------------------------------------
+		-- Assign all user-configured properties to the pane.
+		------------------------------------------------------
+		W_SetPictures(Main.W.names[t], p.pD.p, p.pO.p, p.pG.p, p.pE.p);
+		MapMethods(Main.W.names[t], p.m.D, p.m.HT, p.m.PE, p.m.F);
+		Pane.AllowDrag(Main.W.names[t], p.bDrag);
+		Widget.SetTag(Main.W.names[t], p.tag);
+		--------------------------
+		-- Load the pane's items.
+		--------------------------
+		for k, v in pairs(p.items) do
+			Pane.AddItem(Main.W.names[t], Main.W.names[k], v.x, v.y, v.w, v.h);
+		end
+		-----------------------------------------------------------------------------
+		-- Load the pane's focus chain. Note that the delete boolean is added to the 
+		-- focus chain argument so that empty focus chains are handled properly.
+		-----------------------------------------------------------------------------
+		local fc = { n = 0 };
+		for i, v in ipairs(p.focus) do
+			table.insert(fc, Main.W.names[v]);
+		end
+		table.insert(fc, p.bBackOnDelete);
+		Pane.LoadFocusChain(Main.W.names[t], unpack(fc));
+	end
+end

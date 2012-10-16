@@ -1,0 +1,249 @@
+-----------------------------------------------
+-- NewLayer
+-- Builds a user layer with default properties
+-- Returns: The new layer
+-----------------------------------------------
+function NewLayer ()
+	return { 
+		panes = {}	-- List of panes in layer
+	};
+end
+
+------------------------
+-- DeleteLayer
+-- Unloads a user layer
+-- b: Index of layer
+------------------------
+function DeleteLayer (l)
+	local lt, ld = LB_GetEntry(Main.Comp.Layer, l);
+	-----------------------------------------
+	-- Remove the layer from the user frame.
+	-----------------------------------------
+	RemoveLayerFromFrame(lt);
+	--------------------------------
+	-- Remove the layer properties.
+	--------------------------------
+	for k, v in pairs(ld.panes) do
+		RemovePaneFromLayer(k);
+	end
+end
+
+----------------------------------------
+-- SavePaneLayer
+-- Saves a user pane layer
+-- f: File to which pane layer is saved
+-- pl: Pane layer properties
+----------------------------------------
+function SavePaneLayer (f, pl)
+	local c = 0;
+	for k, v in pairs(pl.panes) do c = c + 1 end;
+	f:write(string.format("\t<nPane>%i</nPane>\n", c));
+	for k, v in pairs(pl.panes) do
+		SavePaneLayerPane(f, k);
+	end
+	SaveStrings(f, pl, { "tag" });
+end
+
+--------------------------------------------
+-- SavePaneLayerPane
+-- Saves data needed to load a layer's pane
+-- f: File handle
+-- lp: Pane ID
+--------------------------------------------
+function SavePaneLayerPane (f, lp)
+	f:write("\t<LP>\n");
+	f:write(string.format("\t\t<ID>\"%s\"</ID>\n", lp));
+	local P = GetPane(lp);
+	f:write(string.format("\t\t<x>%f</x>\n", P.x));
+	f:write(string.format("\t\t<y>%f</y>\n", P.y));
+	f:write(string.format("\t\t<w>%f</w>\n", P.w));
+	f:write(string.format("\t\t<h>%f</h>\n", P.h));
+	f:write("\t</LP>\n");
+end
+
+---------------------------------------
+-- SaveFrame
+-- Saves the user frame
+-- f: File to which the frame is saved
+---------------------------------------
+function SaveFrame (f)
+	f:write(string.format("<nFrame>%i</nFrame>\n", Listbox.GetItemCount(Main.Comp.Frame) - 1));
+	for i, t, l in LB_Range(Main.Comp.Frame, 1) do
+		f:write(string.format("<layer>\"%s\"</layer>\n", t));
+	end
+end
+
+-----------------------------
+-- ChangeLayerID
+-- Changes a user layer's ID
+-- li: ID used by layer
+-- ni: New ID to assign
+-----------------------------
+function ChangeLayerID (li, ni)
+	local L = GetLayer(li);
+	------------------------------------------------------------------------
+	-- If the layer belongs to the frame, change the ID of its frame entry.
+	------------------------------------------------------------------------
+	if L.frame then
+		for i, s, p in LB_Range(Main.Comp.Frame) do
+			if li == s then
+				LB_SetEText(Main.Comp.Frame, i, ni);
+				break;
+			end
+		end	
+	end
+	----------------------------------------------
+	-- Change the ID in the layer component list.
+	----------------------------------------------
+	for i, s, p in LB_Range(Main.Comp.Layer) do
+		if li == s then
+			LB_SetEText(Main.Comp.Layer, i, ni);
+			break;
+		end
+	end
+	------------------------------------------------------------------------
+	-- Remove the layer's current ID from the list, and put the new one in.
+	------------------------------------------------------------------------
+	Main.L.ids[li], Main.L.ids[ni] = nil, L;
+	-----------------------------------------------------------
+	-- If the layer is tagged, update its tag with the new ID.
+	-----------------------------------------------------------
+	if L.tag ~= "" then
+		Main.L.tags[L.tag] = ni;
+	end
+end
+
+-----------------------------------
+-- GetLayer
+-- Gets a user layer, given its ID
+-- l: ID used by layer
+-- Returns: Layer component
+-----------------------------------
+function GetLayer (l)
+	return GetComponent("Layer", l);
+end
+
+-------------------------------------
+-- AddPaneToLayer
+-- Binds a user pane to a user layer
+-- l: ID used by layer
+-- p: ID used by pane
+-- x, y: Pane coordinates
+-- w, h: Pane dimensions
+-------------------------------------
+function AddPaneToLayer (l, p, x, y, w, h)
+	local L, P = GetLayer(l), GetPane(p);
+	P.x, P.y, P.w, P.h, P.layer = x, y, w, h, L;
+	L.panes[p] = P;
+end
+
+----------------------------------------
+-- AddLayerToFrame
+-- Binds a user layer to the user frame
+-- l: ID used by layer
+-- i: Frame slot
+----------------------------------------
+function AddLayerToFrame (l, i)
+	local L = GetLayer(l);
+	LB_AddEntry(Main.Comp.Frame, i + 1, l, L, false);
+	L.frame = true;
+end
+
+--------------------------------------------
+-- RemoveLayerFromFrame
+-- Removes a user layer from the user frame
+-- l: ID used by layer
+--------------------------------------------
+function RemoveLayerFromFrame (l)
+	for i = 1, Listbox.GetItemCount(Main.Comp.Frame) - 1 do
+		local lt, ld = LB_GetEntry(Main.Comp.Frame, i);
+		if lt == l then
+			ld.frame = nil;
+			LB_RemoveEntry(Main.Comp.Frame, i);
+			return;
+		end
+	end
+end
+
+-------------------------------------
+-- LoadLayers
+-- Loads user layers from a data set
+-- ld: Loading data
+-------------------------------------
+function LoadLayers (ld)
+	---------------------------------------------------------------------------------
+	-- If the layer list is non-empty, run through it, register a new layer for each
+	-- entry, and acquire the layer for loading.
+	---------------------------------------------------------------------------------
+	if not ld.b.Layer then return end;
+	for i, v in ipairs(ld.b.Layer) do
+		RegisterComponent("Layer", v.ID);
+		local d = LB_GetEDatum(Main.Comp.Layer, i - 1);
+		-------------------------------
+		-- Load optional layer fields.
+		-------------------------------
+		if v.tag then d.tag = v.tag end;
+		---------------------
+		-- Load pane layers.
+		---------------------
+		if v.LP then
+			for i, lp in ipairs(v.LP) do
+				AddPaneToLayer(v.ID, lp.ID, lp.x, lp.y, lp.w, lp.h);
+			end
+		end
+	end
+end
+
+------------------------------------
+-- LoadFrame
+-- Loads user frame from a data set
+-- ld: Loading data
+------------------------------------
+function LoadFrame (ld)
+	-----------------------------------------------------------------------------------
+	-- If the frame list is non-empty, run through it and add each layer to the frame.
+	-----------------------------------------------------------------------------------
+	if not ld.b.layer then return end;
+	for i, v in ipairs(ld.b.layer) do
+		AddLayerToFrame(v, i - 1);
+	end
+end
+
+---------------------------------------------
+-- InstallTestLayers
+-- Installs test layers from the user layers
+---------------------------------------------
+function InstallTestLayers ()
+	--------------------------------------------------
+	-- Create concrete layers out of all user layers.
+	--------------------------------------------------
+	for i, t, l in LB_Range(Main.Comp.Layer) do
+		-------------------------------------------------
+		-- Generate a new pane layer and store its name.
+		-------------------------------------------------
+		Main.L.names[t] = PaneLayer.Create();
+		-------------------------------------------------------
+		-- Assign all user-configured properties to the layer.
+		-------------------------------------------------------
+		PaneLayer.SetTag(Main.L.names[t], l.tag);
+		---------------------------
+		-- Load the layer's panes.
+		---------------------------
+		for k, v in pairs(l.panes) do
+			PaneLayer.AddPane(Main.L.names[t], Main.W.names[k], v.x, v.y, v.w, v.h);
+		end
+	end
+end
+
+-----------------------------------------------
+-- InstallTestFrame
+-- Installs the test frame from the user frame
+-----------------------------------------------
+function InstallTestFrame ()
+	-------------------------------------------------------------------------------------
+	-- Put all loaded user layers after the sentinel entry into the user frame in order.
+	-------------------------------------------------------------------------------------
+	for i = 1, Listbox.GetItemCount(Main.Comp.Frame) - 1 do
+		table.insert(Main.F, Main.L.names[LB_GetEText(Main.Comp.Frame, i)]);
+	end
+end

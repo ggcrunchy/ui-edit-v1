@@ -1,0 +1,114 @@
+------------------------------------------------
+-- EditButtonEnter
+-- Enters the edit button section of the editor
+------------------------------------------------
+function EditButtonEnter ()
+	--------------------------------------------------------------------
+	-- If we have not loaded the edit button section, proceed to do so.
+	--------------------------------------------------------------------
+	if not Main.S.EditButton then
+		----------------------------------
+		-- Draws the current user button.
+		----------------------------------
+		local function _D_Cur (n, a, x, y, w, h)
+			local b = LB_GetSDatum(Main.Comp.Button);
+			if b then
+				W_SetPictures(n, b.pD.p, b.pO.p, b.pG.p, b.pE.p);
+				----------------------------------------------------
+				-- Reload text to reflect changes, and draw button.
+				----------------------------------------------------
+				W_SetText(n, Main.T24, .25);
+				B_SetString(n, b.string);
+				_D_Button(n, a, x, y, w, h);
+			end
+			Render.DrawBox(x, y, w, h, 1, 1, 1);
+		end
+		-------------------------------------------------
+		-- Create and install the layer and its widgets.
+		-------------------------------------------------
+		SetupSectionTable("EditButton", 0, 0, 1, 1, false);
+		SetupPaneItemCore("Button", "No buttons to delete.", _D_Cur, nil, EditButtonFeaturesEnter);
+	end
+	----------------------
+	-- Enter the section.
+	----------------------
+	LoadSectionTable("EditButton");
+end
+
+---------------------------------------------------------
+-- EditButtonFeaturesEnter
+-- Enters the edit button features section of the editor
+---------------------------------------------------------
+function EditButtonFeaturesEnter ()
+	-----------------------------------------------------------------------------
+	-- If we have not loaded the edit button features section, proceed to do so.
+	-----------------------------------------------------------------------------
+	if not Main.S.EditButtonFeatures then
+		-------------------------------------------
+		-- Processes events for the cancel button.
+		-------------------------------------------
+		local function _PE_C ()
+			--------------------------------------------------------------------------
+			-- Restore the cached button data and the save indicator. Exit the popup.
+			--------------------------------------------------------------------------
+			local b, d = LB_GetSDatum(Main.Comp.Button), Main.CurT.Data;
+			b.bPush, b.string, Main.Save = d.bPush, d.string, Main.SaveC;
+			ClosePopup();
+		end
+		-------------------------------------
+		-- Responds to checkbox push toggle.
+		-------------------------------------
+		local function _PushT (c)
+			-------------------------------------------------------
+			-- Toggle the push flag, and indicate unsaved changes.
+			-------------------------------------------------------
+			LB_GetSDatum(Main.Comp.Button).bPush, Main.Save = c, true;
+		end
+		-------------------------------------------------
+		-- Create and install the layer and its widgets.
+		-------------------------------------------------
+		SetupSectionTable("EditButtonFeatures", 0, 0, .4, .3, true);
+		SetupButton("OK", 0, .8, .3, .2, LeavePopup);
+		SetupButton("Cancel", .3, .8, .3, .2, PushButton(_PE_C));
+		SetupCheckbox("Push", .05, .525, .1, .15, ToggleCheckbox(_PushT));
+		SetupTextbox("S", 16, "", .05, .25, .9, .2, true);
+		------------------------------
+		-- Setup the help text links.
+		------------------------------
+		SetupHelpText(.2, .525, .3, .15, "Pushable", "EB_Push", false);
+		SetupHelpText(.05, .05, .9, .15, "String", "EB_Text");
+		--------------------------
+		-- Setup the focus chain.
+		--------------------------
+		Pane.LoadFocusChain(Main.CurP, Main.CurT.S, false);
+	end
+	--------------------
+	-- Enter the popup.
+	--------------------
+	LoadSectionTable("EditButtonFeatures");
+	--------------------------------------------------------------------------------
+	-- On entry, setup the focus chain, prepare the button, and allow for a cancel.
+	--------------------------------------------------------------------------------
+	if Main.Enter[Main.Tier] then
+		-------------------------------------------------------
+		-- Install the textbox trap for the edit button chain.
+		-------------------------------------------------------
+		TextboxChainPrime(PaneItem.GetPane(Main.CurT.S));
+		---------------------------
+		-- Cache the button state.
+		---------------------------
+		local b = LB_GetSDatum(Main.Comp.Button);
+		Main.CurT.Data = { bPush = b.bPush, string = b.string };
+		-----------------------------------------------------------------
+		-- Setup the checkbox and textbox to reflect the current button.
+		-----------------------------------------------------------------
+		Checkbox.Check(Main.CurT.Push, b.bPush);
+		TB_SetString(Main.CurT.S, b.string, true);
+	end
+	--------------------------------------------------------------------
+	-- Update the text string; if it differs, indicate unsaved changes.
+	--------------------------------------------------------------------
+	local b, s = LB_GetSDatum(Main.Comp.Button), TB_GetString(Main.CurT.S);
+	if b.string ~= s then Main.Save = true end;
+	b.string = s;
+end

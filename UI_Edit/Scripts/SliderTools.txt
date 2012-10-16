@@ -1,0 +1,196 @@
+--------------------------------------------------
+-- PrimeSlider
+-- Creates and primes a slider and its properties
+-- Returns: Name used to reference slider
+--------------------------------------------------
+function PrimeSlider ()
+	local s = Slider.Create();
+	Main.WP[s] = {};
+	return s;
+end
+
+-----------------------------------
+-- SetupSlider
+-- General slider setup procedure
+-- v: Table variable
+-- x, y: Slider coordinates
+-- w, h: Slider dimensions
+-- sx, sy: Thumb start coordinates
+-- ex, ey: Thumb end coordinates
+-- tw, th: Thumb dimensions
+-- pe: Process event method
+-----------------------------------
+function SetupSlider (v, x, y, w, h, sx, sy, ex, ey, tw, th, pe)
+	local s = PrimeSlider();
+	W_SetPictures(s, Main.P.ST_n, Main.P.ST_o, Main.P.ST_g, Main.P.ST_e);
+	W_ExchangePictures(s, "pDT", "pOT", "pGT", "pET");
+	W_SetProperty(s, "pD", Main.P.S_b);
+	W_SetProperty(s, "sx", sx);
+	W_SetProperty(s, "sy", sy);
+	W_SetProperty(s, "ex", ex);
+	W_SetProperty(s, "ey", ey);
+	W_SetProperty(s, "tw", tw);
+	W_SetProperty(s, "th", th);
+	RegisterProcessEventMethod(pe, pe, nil);
+	MapMethods(s, "Slider", "Slider", pe, "Slider");
+	Pane.AddItem(Main.CurP, s, x, y, w, h);
+	Main.CurT[v] = s;
+end
+
+----------------------------------------------
+-- S_Load
+-- Loads a slider with user slider properties
+-- s: Name used to reference slider
+-- sp: Slider properties
+----------------------------------------------
+function S_Load (s, sp)
+	if sp then
+		W_SetPictures(s, sp.pDT.p, sp.pOT.p, sp.pGT.p, sp.pET.p);
+		W_ExchangePictures(s, "pDT", "pOT", "pGT", "pET");
+		W_SetPictures(s, sp.pD.p, sp.pO.p, sp.pG.p, sp.pE.p);
+		Slider.SetOffset(s, sp.offset);
+		W_SetProperty(s, "sx", sp.sx);
+		W_SetProperty(s, "sy", sp.sy);
+		W_SetProperty(s, "ex", sp.ex);
+		W_SetProperty(s, "ey", sp.ey);
+		W_SetProperty(s, "tw", sp.tw);
+		W_SetProperty(s, "th", sp.th);
+	else
+		W_SetPictures(s, nil, nil, nil, nil);
+		W_ExchangePictures(s, "pDT", "pOT", "pGT", "pET");
+		W_SetPictures(s, nil, nil, nil, nil);		
+	end
+end
+
+------------------------------------------------
+-- NewSlider
+-- Builds a user slider with default properties
+-- Returns: The new slider
+------------------------------------------------
+function NewSlider ()
+	return { 
+		offset = 0,	-- Thumb offset
+		bSnap = true,	-- Allow snap
+		bDrag = true,	-- Allow drag
+		m = { D = "Slider", HT = "Slider", PE = "Slider", F = "Slider" },	-- Methods
+		pD = {}, pO = {}, pG = {}, pE = {}, pDT = {}, pOT = {}, pGT = {}, pET = {},	-- Pictures
+		sx = .15, sy = .5, ex = .85, ey = .5, tw = .1, th = .1	-- Thumb
+	};
+end
+
+-------------------------
+-- DeleteSlider
+-- Unloads a user slider
+-- s: Index of slider
+-------------------------
+function DeleteSlider (s)
+	----------------------------------------------------------------------
+	-- Remove the basic widget properties, followed by slider properties.
+	----------------------------------------------------------------------
+	local wp = LB_GetEDatum(Main.Comp.Slider, s);
+	UnregisterWidget(wp);
+	if wp.pDT.p then Render.UnloadPicture(wp.pDT.p) end;
+	if wp.pOT.p then Render.UnloadPicture(wp.pOT.p) end;
+	if wp.pGT.p then Render.UnloadPicture(wp.pGT.p) end;
+	if wp.pET.p then Render.UnloadPicture(wp.pET.p) end;	
+end
+
+------------------------------------
+-- SaveSlider
+-- Saves a user slider
+-- f: File to which slider is saved
+-- s: Slider properties
+------------------------------------
+function SaveSlider (f, s)
+	SaveMethods(f, s, true);
+	SaveFloats(f, s, { "sx", "sy", "ex", "ey", "tw", "th" });
+	SaveBooleans(f, s, { "bSnap", "bDrag" });
+	SavePictures(f, s, { "pDT", "pOT", "pGT", "pET" });
+	SaveWidget(f, s);
+end
+
+--------------------------------------
+-- LoadSliders
+-- Loads user sliders from a data set
+-- ld: Loading data
+--------------------------------------
+function LoadSliders (ld)
+	-----------------------------------------------------------------------------------
+	-- If the slider list is non-empty, run through it, register a new slider for each
+	-- entry, and acquire the slider for loading.
+	-----------------------------------------------------------------------------------
+	if not ld.b.Slider then return end;
+	for i, v in ipairs(ld.b.Slider) do
+		RegisterComponent("Slider", v.ID);
+		local d = LB_GetEDatum(Main.Comp.Slider, i - 1);
+		--------------------------------
+		-- Load required slider fields.
+		--------------------------------
+		d.m = v.m;
+		--------------------------------
+		-- Load optional slider fields.
+		--------------------------------
+		if v.tag then d.tag = v.tag end;
+		if v.sx then d.sx = v.sx end;
+		if v.sy then d.sy = v.sy end;
+		if v.ex then d.ex = v.ex end;
+		if v.ey then d.ey = v.ey end;
+		if v.tw then d.tw = v.tw end;
+		if v.th then d.th = v.th end;
+		if v.bSnap ~= nil then d.bSnap = v.bSnap end;
+		if v.bDrag ~= nil then d.bDrag = v.bDrag end;
+		-------------------------
+		-- Load slider pictures.
+		-------------------------
+		LoadPictures(d, v, { "pD", "pO", "pG", "pE", "pDT", "pOT", "pGT", "pET" });
+	end
+end
+
+------------------------------------------
+-- SliderFixThumbCoordinates
+-- Fixes thumb track to fit within slider
+-- s: Slider properties
+------------------------------------------
+function SliderFixThumbCoordinates (s)
+	if s.sx < .5 * s.tw then s.sx = .5 * s.tw end;
+	if s.sy < .5 * s.th then s.sy = .5 * s.th end;
+	if s.sx + .5 * s.tw > 1 then s.sx = 1 - .5 * s.tw end;
+	if s.sy + .5 * s.th > 1 then s.sy = 1 - .5 * s.th end;
+	if s.ex < .5 * s.tw then s.ex = .5 * s.tw end;
+	if s.ey < .5 * s.th then s.ey = .5 * s.th end;
+	if s.ex + .5 * s.tw > 1 then s.ex = 1 - .5 * s.tw end;
+	if s.ey + .5 * s.th > 1 then s.ey = 1 - .5 * s.th end;
+end
+
+-----------------------------------------------
+-- InstallTestSliders
+-- Installs test sliders from the user sliders
+-----------------------------------------------
+function InstallTestSliders ()
+	----------------------------------------------------
+	-- Create concrete sliders out of all user sliders.
+	----------------------------------------------------
+	for i, t, s in LB_Range(Main.Comp.Slider) do
+		---------------------------------------------
+		-- Generate a new slider and store its name.
+		---------------------------------------------
+		Main.W.names[t] = PrimeSlider();
+		--------------------------------------------------------
+		-- Assign all user-configured properties to the slider.
+		--------------------------------------------------------
+		W_SetPictures(Main.W.names[t], s.pDT.p, s.pOT.p, s.pGT.p, s.pET.p);
+		W_ExchangePictures(Main.W.names[t], "pDT", "pOT", "pGT", "pET");
+		W_SetPictures(Main.W.names[t], s.pD.p, s.pO.p, s.pG.p, s.pE.p);
+		W_SetProperty(Main.W.names[t], "sx", s.sx);
+		W_SetProperty(Main.W.names[t], "sy", s.sy);
+		W_SetProperty(Main.W.names[t], "ex", s.ex);
+		W_SetProperty(Main.W.names[t], "ey", s.ey);
+		W_SetProperty(Main.W.names[t], "tw", s.tw);
+		W_SetProperty(Main.W.names[t], "th", s.th);
+		MapMethods(Main.W.names[t], s.m.D, s.m.HT, s.m.PE, s.m.F);
+		Slider.SetOffset(Main.W.names[t], s.offset);
+		Slider.AllowSnap(Main.W.names[t], s.bSnap);
+		Slider.AllowThumbDrag(Main.W.names[t], s.bDrag);
+		Widget.SetTag(Main.W.names[t], s.tag);
+	end
+end

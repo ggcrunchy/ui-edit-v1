@@ -1,0 +1,109 @@
+-----------------------------------------------
+-- EditFrameEnter
+-- Enters the edit frame section of the editor
+-----------------------------------------------
+function EditFrameEnter ()
+	-------------------------------------------------------------------
+	-- If we have not loaded the edit frame section, proceed to do so.
+	-------------------------------------------------------------------
+	if not Main.S.EditFrame then
+		----------------------------------
+		-- Draws the current user frame.
+		----------------------------------
+		local function _D_Cur (n, a, x, y, w, h)
+			-----------------------------------------------------------------------------
+			-- Iterate through the frame layers, skipping the sentinel spot. We traverse
+			-- the layers from back to front.
+			-----------------------------------------------------------------------------
+			local fs = LB_Selection(Main.Comp.Frame);
+			for i, s, d in LB_Range(Main.Comp.Frame, 1) do
+				local e = Listbox.GetItemCount(Main.Comp.Frame) - i;
+				------------------------------------------------------------------------
+				-- Iterate through the panes in the current layer, and draw a rectangle
+				-- for each one, using their normal pictures. Members of the current 
+				-- layer are given a blue border; others get a white border.
+				------------------------------------------------------------------------
+				local l = LB_GetEDatum(Main.Comp.Frame, e);
+				for k, v in pairs(l.panes) do
+					W_SetPictures(n, v.pD.p, nil, nil, nil);
+					local px, py, pw, ph = x + v.x * w, y + v.y * h, v.w * w, v.h * h;
+					DrawWidget(n, px, py, pw, ph);
+					if i == fs then
+						Render.DrawBox(px, py, pw, ph, 0, 0, 1);
+					else
+						Render.DrawBox(px, py, pw, ph, 1, 1, 1);
+					end
+				end				
+			end
+			Render.DrawBox(x, y, w, h, 1, 1, 1);
+		end
+		-------------------------------------------------
+		-- Processes events for the insert layer button.
+		-------------------------------------------------
+		local function _PE_I ()
+			local s = LB_GetSText(Main.CurT.FreeLayers);
+			if s then
+				-------------------------------------------------------------------------
+				-- Put the layer in the frame, refresh the pane lists, and indicate that
+				-- there are unsaved changes.
+				-------------------------------------------------------------------------
+				AddLayerToFrame(s, LB_Selection(Main.Comp.Frame));
+				Main.Refresh[Main.Enters.n], Main.Save = true, true;
+			else
+				MessageBox("No layers to add.");
+			end
+		end
+		-------------------------------------------------
+		-- Processes events for the remove layer button.
+		-------------------------------------------------
+		local function _PE_R ()
+			local s = LB_GetSText(Main.Comp.Frame);
+			if s ~= "" then
+				-----------------------------------------------------------------
+				-- Remove the layer from the frame, refresh the frame lists, and
+				-- indicate that there are unsaved changes.
+				-----------------------------------------------------------------
+				RemoveLayerFromFrame(s);
+				Main.Refresh[Main.Enters.n], Main.Save = true, true;
+			else
+				MessageBox("Sentinel frame: cannot remove.");
+			end
+		end
+		-------------------------------------------------
+		-- Create and install the layer and its widgets.
+		-------------------------------------------------
+		SetupSectionTable("EditFrame", 0, 0, 1, 1, false);
+		SetupButton("Insert", 0, .1, .2, .1, PushButton(_PE_I));
+		SetupButton("Remove", .2, .1, .2, .1, PushButton(_PE_R));
+		SetupButton("OK", .7, .9, .3, .1, EnterSection(MainEnter));
+		InstallListbox(Main.Comp.Frame, 2, .4125, .1, .225, .1, LB_SelectAndRefresh);
+		SetupListboxUpButton(.6375, .1, .05, .05, Main.Comp.Frame);
+		SetupListboxDownButton(.6375, .15, .05, .05, Main.Comp.Frame);
+		SetupListbox("FreeLayers", 2, .7125, .1, .225, .1, LB_SelectNoRefresh);
+		SetupListboxUpButton(.9375, .1, .05, .05, Main.CurT.FreeLayers);
+		SetupListboxDownButton(.9375, .15, .05, .05, Main.CurT.FreeLayers);
+		----------------------------------------------------------
+		-- Add a custom button to manage the current frame setup.
+		----------------------------------------------------------
+		local b = PrimeButton();
+		AssignMethodsRaw(b, _D_Cur, nil, nil, nil);
+		Pane.AddItem(Main.CurP, b, .025, .325, .6625, .575);
+		------------------------------
+		-- Setup the help text links.
+		------------------------------	
+		SetupHelpText(.4125, .025, .275, .05, "Frame", "EF_UsedLayers");
+		SetupHelpText(.7125, .025, .275, .05, "Free layers", "EF_FreeLayers");
+		SetupHelpText(.0125, .025, .375, .05, "Manage layers", "EF_IR");
+		SetupHelpText(.025, .225, .6625, .05, "Current frame", "EF_Cur");
+	end
+	----------------------
+	-- Enter the section.
+	----------------------
+	LoadSectionTable("EditFrame");
+	-----------------------------------------------------
+	-- On entry/refresh, build the lists of free layers.
+	-----------------------------------------------------
+	if Main.Enter[Main.Tier] or Main.Refresh[Main.Tier] then
+		RefreshFreeList(Main.CurT.FreeLayers, { "Layer" }, "frame");
+	end
+end

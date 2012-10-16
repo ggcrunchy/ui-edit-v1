@@ -1,0 +1,95 @@
+-------------------------------------------
+-- PopulateTestScene
+-- Loads a test scene from user components
+-------------------------------------------
+function PopulateTestScene ()
+	InstallTestButtons();
+	InstallTestSliders();
+	InstallTestListboxes();
+	InstallTestTextboxes();
+	InstallTestCheckboxes();
+	InstallTestRadioboxes();
+	InstallTestPanes();
+	InstallTestLayers();
+	InstallTestFrame();
+end
+
+--------------------------------------------
+-- CloseTestScene
+-- Unloads a UI scene populated by the user
+--------------------------------------------
+function CloseTestScene ()
+	-------------------------------------------------------------------
+	-- Destroy all the test layers, and clear the test layer name table.
+	-------------------------------------------------------------------
+	for k, v in Main.L.names do
+		PaneLayer.Destroy(v);
+	end
+	Main.L.names = {};
+	----------------------------------------------------------------------------------
+	-- Destroy all the test widgets, remove all their properties and method mappings, 
+	-- and clear the test widget name table.
+	----------------------------------------------------------------------------------
+	for k, v in Main.W.names do
+		Widget.Destroy(v);
+		Main.WP[v] = nil;
+		Main.D_Map[v], Main.HT_Map[v], Main.PE_Map[v], Main.F_Map[v] = nil, nil, nil, nil;
+	end
+	Main.W.names = {};
+	-------------------------
+	-- Clear the test frame.
+	-------------------------
+	Main.F = { n = 0 };
+end
+
+--------------------------------------------
+-- UnloadScene
+-- Unloads a UI scene populated by the user
+--------------------------------------------
+function UnloadScene ()
+	----------------------------------------------------------------------------------
+	-- Unload the frame; do so by removing the first element after the no-layer entry
+	-- until only said entry remains.
+	----------------------------------------------------------------------------------
+	while Listbox.GetItemCount(Main.Comp.Frame) > 1 do
+		RemoveLayerFromFrame(LB_GetEText(Main.Comp.Frame, 1));
+	end
+	--------------------------------------------------------------------------
+	-- Iterate through the components, clearing their lists as per the frame.
+	--------------------------------------------------------------------------
+	local cl = { "Layer", "Pane", "Button", "Slider", "Listbox", "Textbox", "Checkbox", "Radiobox" };
+	for i, c in ipairs(cl) do
+		while Listbox.GetItemCount(Main.Comp[c]) ~= 0 do
+			UnregisterComponent(c, 0);
+		end
+	end
+end
+
+---------------------------------------------
+-- LoadScene
+-- Loads a UI scene from a set of scene data
+-- sd: Scene data table
+---------------------------------------------
+function LoadScene (sd)
+	-- Load scripts
+	LoadButtons(sd);
+	LoadSliders(sd);
+	LoadListboxes(sd);
+	LoadTextboxes(sd);
+	LoadCheckboxes(sd);
+	LoadRadioboxes(sd);
+	LoadPanes(sd);
+	LoadLayers(sd);
+	LoadFrame(sd);
+end
+
+---------------------------------------------
+-- VerifyScene
+-- Checks a scene data table for consistency
+-- sd: Scene data table
+---------------------------------------------
+function VerifyScene (sd)
+	-- Verify scripts
+	-- VerifyButtons(sd);
+	-- Verify ...
+end

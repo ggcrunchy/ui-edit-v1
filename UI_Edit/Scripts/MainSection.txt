@@ -1,0 +1,62 @@
+-----------------------------------------
+-- MainEnter
+-- Enters the main section of the editor
+-----------------------------------------
+function MainEnter ()
+	-------------------------------------------------------------
+	-- If we have not loaded the main section, proceed to do so.
+	-------------------------------------------------------------
+	if not Main.S.Main then
+		---------------------------------------
+		-- Function called to quit the editor.
+		---------------------------------------
+		local function _PE_Q ()
+			-------------------------------
+			-- Task to indicate quit time.
+			-------------------------------
+			local function _T_Quit ()
+				---------------------------------------------------------------------
+				-- If allowed to quit, do so and discard this task. If told to wait,
+				-- keep the task around. Otherwise, get rid of the task.
+				---------------------------------------------------------------------
+				if Main.Cond["Q"] == "Do" then
+					Main.Quit = true;
+				elseif Main.Cond["Q"] == "Wait" then
+					return false;
+				end
+				return true;
+			end
+			----------------------------------------------------------------------
+			-- Install the quit task. If we have unsaved changes, prompt the user 
+			-- with an OK/Cancel popup.
+			----------------------------------------------------------------------
+			Main.Cond["Q"] = "Do";
+			PrependTask(_T_Quit);
+			if Main.Save then
+				OKCancel("Some changes are unsaved. Quit anyway?", "Q");
+			end
+		end
+		-------------------------------------------------
+		-- Create and install the layer and its widgets.
+		-------------------------------------------------
+		SetupSectionTable("Main", 0, 0, 1, 1, false);
+		SetupButton("Save Scene", 0, 0, .3, .1, EnterPopup(SaveSceneEnter));	
+		SetupButton("Load Scene", 0, .1, .3, .1, EnterPopup(LoadSceneEnter));
+		SetupButton("Load Script", 0, .2, .3, .1, EnterPopup(LoadScriptEnter));
+		SetupButton("Test", 0, .3, .3, .1, EnterSection(TestEnter));
+		SetupButton("Quit", 0, .9, .3, .1, PushButton(_PE_Q));
+		SetupButton("Edit Frame", .7, 0, .3, .1, EnterSection(EditFrameEnter));
+		SetupButton("Edit Layer", .7, .1, .3, .1, EnterSection(EditPaneLayerEnter));
+		SetupButton("Edit Pane", .7, .2, .3, .1, EnterSection(EditPaneEnter));
+		SetupButton("Edit Button", .7, .3, .3, .1, EnterSection(EditButtonEnter));
+		SetupButton("Edit Slider", .7, .4, .3, .1, EnterSection(EditSliderEnter));
+		SetupButton("Edit Listbox", .7, .5, .3, .1, EnterSection(EditListboxEnter));
+		SetupButton("Edit Textbox", .7, .6, .3, .1, EnterSection(EditTextboxEnter));
+		SetupButton("Edit Checkbox", .7, .7, .3, .1, EnterSection(EditCheckboxEnter));
+		SetupButton("Edit Radiobox", .7, .8, .3, .1, EnterSection(EditRadioboxEnter));
+	end
+	----------------------
+	-- Enter the section.
+	----------------------
+	LoadSectionTable("Main");
+end

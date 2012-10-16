@@ -1,0 +1,57 @@
+<nButton>0</nButton>
+<nSlider>0</nSlider>
+<nListbox>0</nListbox>
+<nTextbox>0</nTextbox>
+<nCheckbox>0</nCheckbox>
+<nRadiobox>1</nRadiobox>
+<Radiobox>
+	<ID>"Radiobox2"</ID>
+		<nOption>5</nOption>
+		<RO>
+			<x>0.200893</x>
+			<y>0.802469</y>
+		</RO>
+		<RO>
+			<x>0.833333</x>
+			<y>0.756173</y>
+		</RO>
+		<RO>
+			<x>0.453869</x>
+			<y>0.478395</y>
+		</RO>
+		<RO>
+			<x>0.848214</x>
+			<y>0.362654</y>
+		</RO>
+		<RO>
+			<x>0.178571</x>
+			<y>0.231481</y>
+		</RO>
+	<m>
+		<D>"Radio"</D>
+		<HT>"Radio"</HT>
+		<PE>"Radio"</PE>
+	</m>
+	<choice>2</choice>
+	<ow>0.235417</ow>
+	<oh>0.167708</oh>
+	<bClick>true</bClick>
+	<pGB>
+		<f>"Main.png"</f>
+		<x1>0.223558</x1>
+		<y1>0.433712</y1>
+		<x2>0.310697</x2>
+		<y2>0.708333</y2>
+	</pGB>
+	<pDC>
+		<f>"Main.png"</f>
+		<x1>0.710337</x1>
+		<y1>0.253788</y1>
+		<x2>0.761418</x2>
+		<y2>0.514205</y2>
+	</pDC>
+	<tag>"MO"</tag>
+</Radiobox>
+<nPane>0</nPane>
+<nLayer>0</nLayer>
+<nFrame>0</nFrame>

@@ -1,0 +1,148 @@
+----------------------------------------------------
+-- EditPaneLayerEnter
+-- Enters the edit pane layer section of the editor
+----------------------------------------------------
+function EditPaneLayerEnter ()
+	------------------------------------------------------------------------
+	-- If we have not loaded the edit pane layer section, proceed to do so.
+	------------------------------------------------------------------------
+	if not Main.S.EditLayer then
+		----------------------------------
+		-- Draws the current user layer.
+		----------------------------------
+		local function _D_Cur (n, a, x, y, w, h)
+			local c = Listbox.GetItemCount(Main.CurT.UsedPanes);
+			if c ~= 0 then
+				local s = LB_Selection(Main.CurT.UsedPanes);
+				------------------------------------------------------------------------
+				-- If we have grabbed the button, get the current cursor position, clip
+				-- it to the button, and convert it to get the region for the current
+				-- pane. If the button has been released, ungrab the button afterward.
+				------------------------------------------------------------------------
+				if Main.WP[n].g then
+					local x1, y1, x2, y2 = SortPairs(Main.WP[n].g.x, Main.WP[n].g.y, ClipBox(Main.CursorX - x, Main.CursorY - y, 0, 0, w, h));
+					local p = LB_GetEDatum(Main.CurT.UsedPanes, s);
+					p.x, p.y, p.w, p.h = x1 / w, y1 / h, (x2 - x1) / w, (y2 - y1) / h;
+					if not Button.IsPushed(n) then
+						Main.WP[n].g = nil;
+					end
+				end
+				-------------------------------------------------------------------------
+				-- Iterate through the panes in use in the currently selected layer, and
+				-- draw a rectangle for each one, using their normal pictures. The
+				-- current pane gets a red border; the others get a white border.
+				-------------------------------------------------------------------------
+				for i = 0, c - 1 do
+					local p = LB_GetEDatum(Main.CurT.UsedPanes, i);
+					W_SetPictures(n, p.pD.p, nil, nil, nil);
+					local px, py, pw, ph = x + p.x * w, y + p.y * h, p.w * w, p.h * h;
+					DrawWidget(n, px, py, pw, ph);
+					if i == s then
+						Render.DrawBox(px, py, pw, ph, 1, 0, 0);
+					else
+						Render.DrawBox(px, py, pw, ph, 1, 1, 1);
+					end
+				end
+			end
+			Render.DrawBox(x, y, w, h, 1, 1, 1);
+		end
+		---------------------------------------------
+		-- Processes events for the add pane button.
+		---------------------------------------------
+		local function _PE_A ()
+			local s = LB_GetSText(Main.CurT.FreePanes);
+			if s then
+				local l = LB_GetSText(Main.Comp.Layer);
+				if not l then
+					MessageBox("No layer to add to.");
+				else
+					-----------------------------------------------------------------
+					-- Put the pane in the layer, starting at full size, refresh the
+					-- pane lists, and indicate that there are unsaved changes.
+					-----------------------------------------------------------------
+					AddPaneToLayer(l, s, 0, 0, 1, 1);
+					Main.Refresh[Main.Enters.n], Main.Save = true, true;
+				end
+			else
+				MessageBox("No panes to add.");
+			end
+		end
+		------------------------------------------------
+		-- Processes events for the remove pane button.
+		------------------------------------------------
+		local function _PE_R ()
+			local s = LB_GetSText(Main.CurT.UsedPanes);
+			if s then
+				------------------------------------------------------------------------
+				-- Remove the pane from the layer, refresh the pane lists, and indicate
+				-- that there are unsaved changes.
+				------------------------------------------------------------------------
+				RemovePaneFromLayer(s);				
+				Main.Refresh[Main.Enters.n], Main.Save = true, true;
+			else
+				MessageBox("No panes to remove.");
+			end
+		end
+		---------------------------------------------------
+		-- Processes events for the current layer display.
+		---------------------------------------------------
+		local function _PE_Cur (n, e, a)
+			---------------------------------------------------------------------------
+			-- If we just pushed the button, we record the grab point. Since this will
+			-- change layer properties, there are now unsaved changes.
+			---------------------------------------------------------------------------
+			local x, y, w, h = Widget.GetXYWH(n, true);
+			if e == Widget.ButtonPush and LB_Selection(Main.Comp.Layer) then
+				local cx, cy = UI.GetEventPoint();
+				Main.WP[n].g = { x = cx - x, y = cy - y };
+				Main.Save = true;
+			end
+		end
+		-------------------------------------------------
+		-- Create and install the layer and its widgets.
+		-------------------------------------------------
+		SetupSectionTable("EditLayer", 0, 0, 1, 1, false);
+		SetupButton("New", .3, .1, .2, .1, NewComponent("Layer"));
+		SetupButton("Delete", .3, .2, .2, .1, DeleteComponent("Layer", "No layers to delete."));
+		SetupButton("Add", .5, .1, .2, .1, PushButton(_PE_A));
+		SetupButton("Remove", .5, .2, .2, .1, PushButton(_PE_R));
+		SetupButton("Tag / ID", .7, .1, .3, .1, EnterPropertyPopup("Layer", EditTagAndIDEnter));
+		SetupButton("OK", .7, .9, .3, .1, EnterSection(MainEnter));
+		InstallListbox(Main.Comp.Layer, 3, .05, .1, .2, .2, LB_SelectAndRefresh);
+		SetupListboxUpButton(.25, .1, .05, .1, Main.Comp.Layer);
+		SetupListboxDownButton(.25, .2, .05, .1, Main.Comp.Layer);
+		SetupListbox("FreePanes", 3, .05, .4, .2, .2, LB_SelectNoRefresh);
+		SetupListboxUpButton(.25, .4, .05, .1, Main.CurT.FreePanes);
+		SetupListboxDownButton(.25, .5, .05, .1, Main.CurT.FreePanes);
+		SetupListbox("UsedPanes", 3, .05, .7, .2, .2, LB_SelectNoRefresh);
+		SetupListboxUpButton(.25, .7, .05, .1, Main.CurT.UsedPanes);
+		SetupListboxDownButton(.25, .8, .05, .1, Main.CurT.UsedPanes);
+		----------------------------------------------------------
+		-- Add a custom button to manage the current layer setup.
+		----------------------------------------------------------
+		Main.CurT.Cur = PrimeButton();
+		AssignMethodsRaw(Main.CurT.Cur, _D_Cur, nil, _PE_Cur, nil);
+		Pane.AddItem(Main.CurP, Main.CurT.Cur, .3, .4, .4, .5);
+		------------------------------
+		-- Setup the help text links.
+		------------------------------	
+		SetupHelpText(.05, .025, .2, .05, "Layers", "EPL_Layers");
+		SetupHelpText(.05, .325, .2, .05, "Free panes", "EPL_FreePanes");
+		SetupHelpText(.05, .625, .2, .05, "Used panes", "EPL_UsedPanes");
+		SetupHelpText(.3125, .025, .175, .05, "Manage layers", "EPL_ND");
+		SetupHelpText(.5125, .025, .175, .05, "Manage panes", "EPL_AR");
+		SetupHelpText(.7125, .025, .275, .05, "Tag / ID", "EPL_TagID");
+		SetupHelpText(.3, .325, .4, .05, "Current layer", "EPL_Cur");
+	end
+	----------------------
+	-- Enter the section.
+	----------------------
+	LoadSectionTable("EditLayer");
+	------------------------------------------------------------------------------------
+	-- On entry/refresh, build the lists of free panes and panes used by current layer.
+	------------------------------------------------------------------------------------
+	if Main.Enter[Main.Tier] or Main.Refresh[Main.Tier] then
+		RefreshFreeList(Main.CurT.FreePanes, { "Pane" }, "layer");
+		RefreshUsedList(Main.CurT.UsedPanes, "Layer", "panes", Main.CurT.Cur);
+	end
+end

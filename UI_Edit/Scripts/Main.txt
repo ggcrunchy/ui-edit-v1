@@ -1,0 +1,75 @@
+---------------------------------------------------------
+-- Build special cursors, and center the current cursor.
+---------------------------------------------------------
+BuildQuestionMarkCursor();
+local w, h = Render.GetVideoSize();
+SDL.WarpMouse(w / 2, h / 2);
+-----------------------------
+-- Register default methods.
+-----------------------------
+RegisterBasicDrawMethods();
+RegisterBasicHitTestMethods();
+RegisterBasicProcessEventMethods();
+RegisterBasicFitMethods();
+------------------------------
+-- Start in the main section.
+------------------------------
+GoToSection(MainEnter);
+--------------
+-- Main loop.
+--------------
+while not Main.Quit do
+	------------------------------------------------------------
+	-- Get the current mouse state, and update the press state.
+	------------------------------------------------------------
+	local b, x, y = SDL.GetMouseState(0, 0);
+	local w, h = Render.GetVideoSize();
+	x, y = x / w, y / h;
+	Main.CursorX, Main.CursorY = x, y;
+	Main.Pressed = SDL.Test(b, SDL.BUTTON_LMASK);
+	--------------------------------------------------------------------
+	-- Create clean slates for tracking keys pressed/released this run.
+	--------------------------------------------------------------------
+	Main.CurD, Main.CurU = {}, {};
+	----------------
+	-- Trap events.
+	----------------
+	RunTraps();
+	----------------------------------------------
+	-- Propagate input to the top tier of the UI.
+	----------------------------------------------
+	Main.Enters[Main.Enters.n]();
+	UI.PropagateInput(x, y, Main.Pressed);
+	--------------------------
+	-- Process the task list.
+	--------------------------
+	RunTasks();
+	------------------------------------------------------------------------------------
+	-- Iterate through the tier list, drawing the UI from bottom to top. We track which
+	-- tier, as this can be important during a refresh or entry.
+	------------------------------------------------------------------------------------
+	Render.PrepareFrame();
+	for i, e in ipairs(Main.Enters) do
+		Main.Tier = i;
+		e();
+		UI.Draw();
+	end
+	Render.DrawFrame();
+	-----------------------------------------------------------------------------------
+	-- At this point, we have successfully refreshed/entered any new section or popup.
+	-----------------------------------------------------------------------------------
+	Main.Enter, Main.Refresh = {}, {};
+	------------------------------------
+	-- Give some time to other threads.
+	------------------------------------
+	SDL.Delay(1);
+end
+--------------------
+-- Release cursors.
+--------------------
+SDL.FreeCursor(Main.Cursors.qm);
+---------------------
+-- Close the editor.
+---------------------
+UI.QuitSystem();
+Render.CloseGraphics();

@@ -1,0 +1,35 @@
+<nButton>0</nButton>
+<nSlider>0</nSlider>
+<nListbox>0</nListbox>
+<nTextbox>1</nTextbox>
+<Textbox>
+	<ID>"Textbox1"</ID>
+	<m>
+		<D>"HText"</D>
+		<HT>"HText"</HT>
+		<PE>"HText"</PE>
+		<F>"HText"</F>
+	</m>
+	<max>11</max>
+	<offset>0</offset>
+	<cursor>2</cursor>
+	<selectIndex>0</selectIndex>
+	<selectCount>0</selectCount>
+	<timeout>300</timeout>
+	<bClick>true</bClick>
+	<bDragOver>false</bDragOver>
+	<text>"MIRMAL NEEP"</text>
+	<pS>
+		<f>"Main.png"</f>
+		<x1>0.025240</x1>
+		<y1>0.154356</y1>
+		<x2>0.061298</x2>
+		<y2>0.196970</y2>
+	</pS>
+	<tag>""</tag>
+</Textbox>
+<nCheckbox>0</nCheckbox>
+<nRadiobox>0</nRadiobox>
+<nPane>0</nPane>
+<nLayer>0</nLayer>
+<nFrame>0</nFrame>

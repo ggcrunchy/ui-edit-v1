@@ -1,0 +1,134 @@
+---------------------------------------
+-- _HT_Box
+-- Performs a box hit test on a widget
+-- n: Name used to reference widget
+-- cx, cy: Cursor coordinates
+-- a: Application context
+-- x, y: Widget coordinates
+-- w, h: Widget dimensions
+---------------------------------------
+function _HT_Box (n, cx, cy, a, x, y, w, h)
+	if PointInBox(cx, cy, x, y, w, h) then
+		Widget.SignalCursorOver();
+	end
+end
+
+------------------------------------
+-- _HT_Slider
+-- Performs a hit test on a slider
+-- n: Name used to reference slider
+-- cx, cy: Cursor coordinates
+-- a: Application context
+-- x, y: Slider coordinates
+-- w, h: Slider dimensions
+------------------------------------
+function _HT_Slider (n, cx, cy, a, x, y, w, h)
+	-------------------------------------------------------------------------------
+	-- If the cursor hits the slider, we then find the box centered at the current 
+	-- offset. If the cursor hits this box as well, it is over the thumb.
+	-------------------------------------------------------------------------------
+	if PointInBox(cx, cy, x, y, w, h) then
+		Widget.SignalCursorOver();
+		local p, o = W_GetPSet(n), Slider.GetOffset(n);
+		local tx = p.sx + o * (p.ex - p.sx) - .5 * p.tw;
+		local ty = p.sy + o * (p.ey - p.sy) - .5 * p.th;
+		if PointInBox(cx, cy, x + tx * w, y + ty * h, p.tw * w, p.th * h) then
+			Slider.SignalCursorOverThumb();
+		end
+	end
+end
+
+---------------------------------------------
+-- _HT_VList
+-- Performs a hit test on a vertical listbox
+-- n: Name used to reference listbox
+-- cx, cy: Cursor coordinates
+-- a: Application context
+-- x, y: Listbox coordinates
+-- w, h: Listbox dimensions
+---------------------------------------------
+function _HT_VList (n, cx, cy, a, x, y, w, h)
+	-------------------------------------------------------------------------------------
+	-- If the cursor hits the listbox, we check whether it has hit an item. Because each 
+	-- item is as wide as the listbox and there is no vertical separation between items,
+	-- we can find its relative offset by evenly breaking the listbox up vertically into
+	-- a number of sections equal to the listbox's capacity, and fitting the cursor into
+	-- one of those sections. This offset, when added to the listbox's absolute offset,
+	-- indicates which item the cursor is over; if it does not exceed the listbox's
+	-- range, we have hit said item.
+	-------------------------------------------------------------------------------------
+	if PointInBox(cx, cy, x, y, w, h) then
+		Widget.SignalCursorOver();
+		local o, i = Listbox.GetOffset(n), math.floor((cy - y) * Listbox.GetCapacity(n) / h);
+		if o + i < Listbox.GetItemCount(n) then
+			Listbox.SignalCursorOverItem(o + i);
+		end
+	end
+end
+
+-----------------------------------------------
+-- _HT_HText
+-- Performs a hit test on a horizontal textbox
+-- n: Name used to reference textbox
+-- cx, cy: Cursor coordinates
+-- a: Application context
+-- x, y: Textbox coordinates
+-- w, h: Textbox dimensions
+-----------------------------------------------
+function _HT_HText (n, cx, cy, a, x, y, w, h)
+	-----------------------------------------------------------------------------------
+	-- If the cursor hits the textbox, we check whether it has hit a spot in the text.
+	-- Assuming the character at the textbox's offset is flush with the left edge, we
+	-- run from the offset and through the characters until either the text ends or it
+	-- gets cut off by the right edge. If the cursor is over one of these characters,
+	-- we add its relative index to the textbox's offset to get its spot, and indicate
+	-- that we have hit said spot.
+	-----------------------------------------------------------------------------------
+	if PointInBox(cx, cy, x, y, w, h) then
+		Widget.SignalCursorOver();
+		local eW, t = x + w, W_GetText(n);
+		for i, c in TB_Range(n, Textbox.GetOffset(n)) do
+			local dW = GetTextWidth(t, c, 1, 1);
+			if cx >= x and cx < x + dW then
+				Textbox.SignalCursorOverSpot(i);
+				break;
+			elseif x + dW > eW then
+				break;
+			end
+			x = x + dW;
+		end
+	end
+end
+
+--------------------------------------
+-- _HT_Radio
+-- Performs a hit test on a radiobox
+-- n: Name used to reference radiobox
+-- cx, cy: Cursor coordinates
+-- a: Application context
+-- x, y: Radiobox coordinates
+-- w, h: Radiobox dimensions
+--------------------------------------
+function _HT_Radio (n, cx, cy, a, x, y, w, h)
+	if PointInBox(cx, cy, x, y, w, h) then
+		Widget.SignalCursorOver();
+		local p = W_GetPSet(n);
+		for i, o in RB_Range(n) do
+			if PointInBox(cx, cy, x + (o.x - .5 * p.tw) * w, y + (o.y - .5 * p.th) * h, p.tw * w, p.th * h) then
+				Radiobox.SignalCursorOverOption(i);
+			end
+		end
+	end
+end
+
+------------------------------------------------------
+-- RegisterBasicHitTestMethods
+-- Registers all pre-defined hit test methods
+------------------------------------------------------
+function RegisterBasicHitTestMethods ()
+	RegisterHitTestMethod("Default", _HT_Box, "General");
+	RegisterHitTestMethod("Slider", _HT_Slider, "Slider");
+	RegisterHitTestMethod("VList", _HT_VList, "Listbox");
+	RegisterHitTestMethod("HText", _HT_HText, "Textbox");
+	RegisterHitTestMethod("Radio", _HT_Radio, "Radiobox");
+end

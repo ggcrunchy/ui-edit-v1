@@ -1,0 +1,275 @@
+---------------------------------------------------------------
+-- RegisterMethodsRaw
+-- Registers methods, without categorization or lookup strings
+-- d: Draw method, if not nil
+-- h: Hit test method, if not nil
+-- p: Process event method, if not nil
+-- f: Fit method, if not nil
+---------------------------------------------------------------
+function RegisterMethodsRaw (d, h, p, f)
+	if d then RegisterDrawMethod(d, d, nil) end;
+	if h then RegisterHitTestMethod(h, h, nil) end;
+	if p then RegisterProcessEventMethod(p, p, nil) end;
+	if f then RegisterFitMethod(f, f, nil) end;
+end
+
+-------------------------------------------
+-- MapMethods
+-- Maps methods to a widget
+-- n: Name used to reference widget
+-- d: Draw method, if not nil
+-- h: Hit test method, if not nil
+-- p: Process event method, if not nil
+-- f: Fit method, if not nil
+-------------------------------------------
+function MapMethods (n, d, h, p, f)
+	if d then MapDrawMethod(n, d) end;
+	if h then MapHitTestMethod(n, h) end;
+	if p then MapProcessEventMethod(n, p) end;
+	if f then MapFitMethod(n, f) end;
+end
+
+----------------------------------------------------
+-- AssignMethodsRaw
+-- Registers methods raw, and maps them to a widget
+-- n: Name used to reference widget
+-- d: Draw method, if not nil
+-- h: Hit test method, if not nil
+-- p: Process event method, if not nil
+-- f: Fit method, if not nil
+----------------------------------------------------
+function AssignMethodsRaw (n, d, h, p, f)
+	RegisterMethodsRaw(d, h, p, f);
+	MapMethods(n, d, h, p, f);
+end
+
+-------------------------------------------------------------------
+-- EnumerateMethods
+-- Builds a table from all of a given set of methods in a category
+-- s: Set out of which to draw methods
+-- c: Category to enumerate
+-- Returns: Table of method lookup strings
+-------------------------------------------------------------------
+function EnumerateMethods (s, c)
+	---------------------------------------------------------------------------------
+	-- We create two empty tables and scan through the given set. If the category to
+	-- enumerate is "All", we add each entry to the first table. Any entry listed
+	-- under "General" is also added to the first table. Finally, we check whether 
+	-- an entry's category matches the requested category; if so, we add it to the 
+	-- second table. We then concatenate the second table onto the first table, and
+	-- return the filled table to the user.
+	---------------------------------------------------------------------------------
+	local p, o = { n = 0 }, { n = 0 };
+	for e, m in pairs(s) do
+		if c == "All" or m.cat == "General" then
+			table.insert(p, e);
+		elseif c == m.cat then
+			table.insert(o, e);
+		end
+	end
+	for i, e in ipairs(o) do
+		table.insert(p, e);
+	end
+	return p;
+end
+
+------------------------------------
+-- RegisterDrawMethod
+-- Registers a draw method
+-- n: Hit test lookup string
+-- f: Method to register
+-- c: Category of method
+------------------------------------
+function RegisterDrawMethod (n, f, c)
+	Main.D_Set[n] = { func = f, cat = c };
+end
+
+-------------------------------
+-- RegisterHitTestMethod
+-- Registers a hit test method
+-- n: Hit test lookup string
+-- f: Method to register
+-- c: Category of method
+-------------------------------
+function RegisterHitTestMethod (n, f, c)
+	Main.HT_Set[n] = { func = f, cat = c };
+end
+
+------------------------------------
+-- RegisterProcessEventMethod
+-- Registers a process event method
+-- n: Process event lookup string
+-- f: Method to register
+-- c: Category of method
+------------------------------------
+function RegisterProcessEventMethod (n, f, c)
+	Main.PE_Set[n] = { func = f, cat = c };
+end
+
+-----------------------------
+-- RegisterFitMethod
+-- Registers a fit method
+-- n: Hit test lookup string
+-- f: Method to register
+-- c: Category of method
+-----------------------------
+function RegisterFitMethod (n, f, c)
+	Main.F_Set[n] = { func = f, cat = c };
+end
+
+---------------------------------------
+-- MapDrawMethod
+-- Maps a draw method
+-- n: Widget to which method is mapped
+-- e: Hit test lookup string
+---------------------------------------
+function MapDrawMethod (n, e)
+	Main.D_Map[n] = e;
+end
+
+---------------------------------------
+-- MapHitTestMethod
+-- Maps a hit test method
+-- n: Widget to which method is mapped
+-- e: Hit test lookup string
+---------------------------------------
+function MapHitTestMethod (n, e)
+	Main.HT_Map[n] = e;
+end
+
+---------------------------------------
+-- MapProcessEventMethod
+-- Maps a process event method
+-- n: Widget to which method is mapped
+-- e: Hit test lookup string
+---------------------------------------
+function MapProcessEventMethod (n, e)
+	Main.PE_Map[n] = e;
+end
+
+---------------------------------------
+-- MapFitMethod
+-- Maps a fit method
+-- n: Widget to which method is mapped
+-- e: Hit test lookup string
+---------------------------------------
+function MapFitMethod (n, e)
+	Main.F_Map[n] = e;
+end
+
+------------------------------------------------------
+-- EnumerateDrawMethods
+-- Builds a table from all draw methods in a category
+-- c: Category to enumerate
+-- Returns: Table of method lookup strings
+------------------------------------------------------
+function EnumerateDrawMethods (c)
+	return EnumerateMethods(Main.D_Set, c);
+end
+
+----------------------------------------------------------
+-- EnumerateHitTestMethods
+-- Builds a table from all hit test methods in a category
+-- c: Category to enumerate
+-- Returns: Table of method lookup strings
+----------------------------------------------------------
+function EnumerateHitTestMethods (c)
+	return EnumerateMethods(Main.HT_Set, c);
+end
+
+---------------------------------------------------------------
+-- EnumerateProcessEventMethods
+-- Builds a table from all process event methods in a category
+-- c: Category to enumerate
+-- Returns: Table of method lookup strings
+---------------------------------------------------------------
+function EnumerateProcessEventMethods (c)
+	return EnumerateMethods(Main.PE_Set, c);
+end
+
+-----------------------------------------------------
+-- EnumerateFitMethods
+-- Builds a table from all fit methods in a category
+-- c: Category to enumerate
+-- Returns: Table of method lookup strings
+-----------------------------------------------------
+function EnumerateFitMethods (c)
+	return EnumerateMethods(Main.F_Set, c);
+end
+
+----------------------------------------
+-- DrawCall
+-- Calls a widget's draw method
+-- n: Name used to reference the widget
+-- a: Application context
+----------------------------------------
+function DrawCall (n, a)
+	------------------------------------------------------------------------------------
+	-- Look up the widget's method(assign the default if none exists). Get the widget's
+	-- global coordinates and dimensions, and invoke the method.
+	------------------------------------------------------------------------------------
+	local m = Main.D_Map[n];
+	if not m then
+		m = "Default";
+		MapDrawMethod(n, m);
+	end
+	Main.D_Set[m].func(n, a, Widget.GetXYWH(n, true));
+end
+
+----------------------------------------
+-- HitTestCall
+-- Calls a widget's hit test method
+-- n: Name used to reference the widget
+-- cx, cy: Cursor coordinates
+-- a: Application context
+----------------------------------------
+function HitTestCall (n, cx, cy, a)
+	------------------------------------------------------------------------------------
+	-- Look up the widget's method(assign the default if none exists). Get the widget's
+	-- global coordinates and dimensions, and invoke the method.
+	------------------------------------------------------------------------------------
+	local m = Main.HT_Map[n];
+	if not m then
+		m = "Default";
+		MapHitTestMethod(n, m);
+	end
+	Main.HT_Set[m].func(n, cx, cy, a, Widget.GetXYWH(n, true));
+end
+
+-----------------------------------------
+-- ProcessEventCall
+-- Calls a widget's process event method
+-- e: Event to process
+-- a: Application context
+-----------------------------------------
+function ProcessEventCall (n, e, a)
+	----------------------------------------------------------------------------------
+	-- Look up the widget's method(assign the default if none exists), and invoke it.
+	----------------------------------------------------------------------------------
+	local m = Main.PE_Map[n];
+	if not m then
+		m = "NOP";
+		MapProcessEventMethod(n, m);
+	end
+	Main.PE_Set[m].func(n, e, a);
+end
+
+----------------------------------------
+-- FitCall
+-- Calls a widget's fit method
+-- n: Name used to reference the widget
+-- cx, cy: Cursor coordinates
+-- a: Application context
+----------------------------------------
+function FitCall (n, cx, cy, a)
+	------------------------------------------------------------------------------------
+	-- Look up the widget's method(assign the default if none exists). Get the widget's
+	-- global coordinates and dimensions, invoke the method, and return the result.
+	------------------------------------------------------------------------------------
+	local m = Main.F_Map[n];
+	if not m then
+		m = "NOP";
+		MapFitMethod(n, m);
+	end
+	return Main.F_Set[m].func(n, cx, cy, a, Widget.GetXYWH(n, true));
+end

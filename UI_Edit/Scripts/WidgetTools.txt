@@ -1,0 +1,84 @@
+------------------------------------
+-- W_SetText
+-- Sets a widget's text information
+-- n: Name used to reference widget
+-- t: Text font/set to assign
+-- o: Offset of text
+------------------------------------
+function W_SetText (n, t, o)
+	Main.WP[n].t, Main.WP[n].o = t, o;
+end
+
+--------------------------------------------------
+-- W_GetText
+-- Gets a widget's text information
+-- n: Name used to reference widget
+-- Returns: The widget's text font/set and offset
+--------------------------------------------------
+function W_GetText (n, e)
+	return Main.WP[n].t, Main.WP[n].o;
+end
+
+------------------------------------------
+-- W_SetProperty
+-- Assigns a generic property to a widget
+-- n: Name used to reference widget
+-- p: Property to set
+-- d: Datum to assign
+------------------------------------------
+function W_SetProperty (n, p, d)
+	Main.WP[n][p] = d;
+end
+
+------------------------------------
+-- W_GetPSet
+-- Obtains a widget's property set
+-- n: Name used to reference widget
+-- Returns: Property set
+------------------------------------
+function W_GetPSet (n)
+	return Main.WP[n];
+end
+
+----------------------------------------------------------
+-- W_SetPictures
+-- Assigns a group of pictures to a widget
+-- n: Name used to reference widget
+-- d: Default widget picture
+-- o: Picture used by widget when grabbed but not entered
+-- g: Picture used by widget when grabbed and entered
+-- e: Picture used by widget when not grabbed but entered
+----------------------------------------------------------
+function W_SetPictures (n, d, o, g, e)
+	local p = Main.WP[n];
+	p.pD, p.pO, p.pG, p.pE = d, o, g, e;
+end
+
+---------------------------------------------------------------------------------
+-- W_ExchangePictures
+-- Exchanges a group of pictures with the general pictures in a widget
+-- n: Name used to reference widget
+-- d: Picture to switch with default widget picture
+-- o: Picture to switch with picture used by widget when grabbed but not entered
+-- g: Picture to switch with picture used by widget when grabbed and entered
+-- e: Picture to switch with picture used by widget when not grabbed but entered
+---------------------------------------------------------------------------------
+function W_ExchangePictures (n, d, o, g, e)
+	local p = Main.WP[n];
+	p.pD, p.pO, p.pG, p.pE, p[d], p[o], p[g], p[e] = p[d], p[o], p[g], p[e], p.pD, p.pO, p.pG, p.pE;
+end
+
+----------------------------------------------------
+-- UnregisterWidget
+-- Unregister properties common to all user widgets
+-- w: Widget property table
+----------------------------------------------------
+function UnregisterWidget (w)
+	-------------------------------
+	-- Unload all loaded pictures.
+	-------------------------------
+	if w.pD.p then Render.UnloadPicture(w.pD.p) end;
+	if w.pO.p then Render.UnloadPicture(w.pO.p) end;
+	if w.pG.p then Render.UnloadPicture(w.pG.p) end;
+	if w.pE.p then Render.UnloadPicture(w.pE.p) end;
+end

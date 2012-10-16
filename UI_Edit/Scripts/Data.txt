@@ -1,0 +1,236 @@
+-------------------------------------
+-- Picture-loading utility function.
+-------------------------------------
+function _LP (x1, y1, x2, y2)
+	local i, cx, cy = "Assets/Textures/Main.png", 1 / 32, 1 / 256;
+	return Render.LoadPicture(i, cx * x1, cy * y1, cx * x2, cy * y2);
+end
+
+----------------------------------
+-- Text-loading utility function.
+----------------------------------
+function _LT (s)
+	local f = Render.LoadFont("Assets/Fonts/wds052801.ttf", s);
+	return { font = f, text = BuildTextSet(f, 255, 255, 255) };
+end
+
+--------------------------------------------------
+-- Install some data used to maintain the editor.
+--------------------------------------------------
+Main = {
+	P = {	-- Pictures used to draw the UI
+		white = _LP(1, 1, 2, 2),-- Flat colors
+		gray = _LP(5, 1, 6, 2),	
+		clear = _LP(1, 5, 2, 6),
+		black = _LP(5, 5, 6, 6),
+		blue = _LP(11, 11, 12, 12),
+		purple = _LP(11, 3, 12, 4),
+		C_c = _LP(1, 33, 30, 62),	-- Checkbox check
+		RO_o = _LP(0, 16, 15, 31),	-- Radiobox options
+		RO_c = _LP(16, 16, 31, 31),
+		B_n = _LP(0, 65, 31, 79),	-- Normal button
+		B_e = _LP(0, 81, 31, 95),
+		B_g = _LP(0, 97, 31, 111),
+		B_o = _LP(0, 113, 31, 127),
+		B_nlu = _LP(0, 130, 15, 138),	-- Listbox up button
+		B_elu = _LP(16, 130, 31, 138),
+		B_glu = _LP(0, 148, 15, 156),
+		B_olu = _LP(16, 148, 31, 156),
+		B_nld = _LP(0, 164, 15, 172),	-- Listbox down button
+		B_eld = _LP(16, 164, 31, 172),
+		B_gld = _LP(0, 180, 15, 188),
+		B_old = _LP(16, 180, 31, 188),
+		S_b = _LP(1, 225, 30, 238),	-- Slider bar
+		ST_n = _LP(3, 196, 12, 203),-- Slider thumb	
+		ST_e = _LP(19, 196, 28, 203),
+		ST_g = _LP(3, 212, 12, 219),
+		ST_o = _LP(19, 212, 28, 219)
+	}, T18 = _LT(18), T24 = _LT(24),-- Text used to draw the UI
+	Help = {},	-- List of help text
+	Enters = { n = 0 },	-- List of enter routines
+	Enter = {},	-- List indicating whether section/popup at each tier was just entered
+	Refresh = {},	-- List indicating whether section/popup at each tier should be refreshed
+	Tasks = { n = 0 },	-- List of tasks to perform
+	Traps = {	-- Table of trap lists
+		key = { n = 0 }	-- Stack of traps to perform
+	};
+	D_Set = {}, D_Map = {},	-- Drawing method tables
+	HT_Set = {}, HT_Map = {},	-- Hit test method tables
+	PE_Set = {}, PE_Map = {},	-- Process event method tables
+	F_Set = {}, F_Map = {},	-- Fit method tables
+	WP = {},-- Catalogue of widget properties
+	S = {},	-- Table of editor sections
+	F = { n = 0 },	-- User pane layer frame
+	L = {	-- Catalogue of user pane layers
+		tags = {},	-- Layer tag table
+		ids = {},	-- Layer ID table
+		names = {}	-- Layer name table
+	},
+	W = {	-- Catalogue of user widgets
+		tags = {},	-- Widget tag table
+		ids = {},	-- Widget ID table
+		names = {}	-- Widget name table
+	},
+	ND = {	-- Component new/delete functions
+		Layer = { n = NewLayer, d = DeleteLayer },
+		Pane = { n = NewPane, d = DeletePane },
+		Button = { n = NewButton, d = DeleteButton },
+		Slider = { n = NewSlider, d = DeleteSlider },
+		Listbox = { n = NewListbox, d = DeleteListbox },
+		Textbox = { n = NewTextbox, d = DeleteTextbox },
+		Checkbox = { n = NewCheckbox, d = DeleteCheckbox },
+		Radiobox = { n = NewRadiobox, d = DeleteRadiobox }
+	},
+	LF = {	-- Format data used to load file
+		MWF = {	-- Methods with fit
+			D = "S", HT = "S", PE = "S", F = "S",	-- MWF strings
+			_R = { "D", "HT", "PE", "F" }	-- Required MWF fields
+		},
+		MNF = {	-- Methods not including fit
+			D = "S", HT = "S", PE = "S",-- MNF strings
+			_R = { "D", "HT", "PE" }	-- Required MNF fields
+		},
+		P = {	-- Pictures
+			f = "S",	-- Picture string
+			x1 = "F", y1 = "F", x2 = "F", y2 = "F",	-- Picture floats
+			_R = { "f", "x1", "y1", "x2", "y2" }	-- Required Picture fields
+		},
+		LI = {	-- Listbox items
+			string = "S",	-- LI string
+			context = "I",	-- LI int
+			bSelected = "B",-- LI boolean
+			_R = { "string", "context", "bSelected" }	-- required LI fields
+		},
+		RO = {	-- Radiobox options
+			x = "F", y = "F",	-- RO floats
+			_R = { "x", "y" }	-- Required RO fields	
+		},		
+		PI = {	-- Pane items
+			ID = "S",	-- PI string
+			x = "F", y = "F", w = "F", h = "F",	-- PI floats
+			_R = { "ID", "x", "y", "w", "h" }	-- Required PI fields
+		},
+		LP = {	-- Layer panes
+			ID = "S",	-- LP string
+			x = "F", y = "F", w = "F", h = "F",	-- LP floats
+			_R = { "ID", "x", "y", "w", "h" }	-- Required LP fields
+		},
+		Layer = {	-- Pane layers
+			ID = "S", tag = "S",-- Layer strings
+			nPane = "L",	-- Layer list size
+			_R = { "ID" },	-- Required Layer fields
+			_L = { nPane = "LP" }	-- Layer list
+		},
+		Pane = {	-- Panes
+			ID = "S", tag = "S", item = "S", focus = "S",	-- Pane strings
+			nItem = "L", nFocus = "L",	-- Pane list sizes
+			bDrag = "B", bBackOnDelete = "B",	-- Pane booleans
+			m = "MWF",	-- Pane methods, with fit
+			pD = "P", pO = "P", pG = "P", pE = "P",	-- Pane pictures
+			_R = { "ID", "m" },	-- Required pane fields
+			_L = { nItem = "PI", nFocus = ">focus" }	-- Pane lists
+		},
+		Button = {	-- Buttons
+			ID = "S", tag = "S", string = "S",	-- Button strings
+			bPush = "B",-- Button boolean
+			m = "MNF",	-- Button methods, no fit
+			pD = "P", pO = "P", pG = "P", pE = "P",	-- Button pictures
+			_R = { "ID", "m" }	-- Required Button fields
+		},
+		Slider = {	-- Sliders
+			ID = "S", tag = "S",-- Slider strings
+			offset = "F", sx = "F", sy = "F", ex = "F", ey = "F", tw = "F", th = "F",	-- Slider floats
+			bSnap = "B", bDrag = "B",	-- Slider booleans
+			m = "MWF",	-- Slider methods, with fit
+			pD = "P", pO = "P", pG = "P", pE = "P", pDT = "P", pOT = "P", pGT = "P", pET = "P",	-- Slider pictures
+			_R = { "ID", "m" }	-- Required Slider fields
+		},
+		Listbox = {	-- Listboxes
+			ID = "S", tag = "S",-- Listbox strings
+			nItem = "L",-- Listbox list size
+			capacity = "I",	offset = "I",	-- Listbox ints
+			bClick = "B", bDragOver = "B",	-- Listbox booleans
+			m = "MWF",	-- Listbox methods, with fit
+			pD = "P", pO = "P", pG = "P", pE = "P", pDI = "P", pOI = "P", pGI = "P", pEI = "P",	pDS = "P", pOS = "P", pGS = "P", pES = "P",	-- Listbox pictures
+			_R = { "ID", "m" },	-- Required Listbox fields
+			_L = { nItem = "LI" }	-- Listbox list
+		},
+		Textbox = {	-- Textboxes
+			ID = "S", tag = "S", text = "S",-- Textbox strings
+			offset = "F", cursor = "F",	-- Textbox floats
+			max = "I", timeout = "I", selectIndex = "I", selectCount = "I",	-- Textbox ints
+			bClick = "B", bDragOver = "B",	-- Textbox booleans
+			m = "MWF",	-- Textbox methods, with fit
+			pD = "P", pO = "P", pG = "P", pE = "P", pS = "P", pC = "P",	-- Textbox pictures
+			_R = { "ID", "m" }	-- Required Textbox fields
+		},
+		Checkbox = {	-- Checkboxes
+			ID = "S", tag = "S",	-- Checkbox strings
+			bClick = "B", bCheck = "B",	-- Checkbox booleans
+			m = "MNF",	-- Checkbox methods, no fit
+			pD = "P", pO = "P", pG = "P", pE = "P",	pDC = "P", pOC = "P", pGC = "P", pEC = "P",	-- Checkbox pictures
+			_R = { "ID", "m" }	-- Required Checkbox fields
+		},
+		Radiobox = {	-- Radioboxes
+			ID = "S", tag = "S",-- Radiobox strings
+			nOption = "L",	-- Radiobox list size
+			ow = "F", oh = "F",	-- Radiobox floats
+			choice = "I",	-- Radiobox int
+			bClick = "B",	-- Radiobox boolean
+			m = "MNF",	-- Radiobox methods, no fit
+			pD = "P", pO = "P", pG = "P", pE = "P", pDB = "P", pOB = "P", pGB = "P", pEB = "P", pDC = "P", pOC = "P", pGC = "P", pEC = "P",	-- Radiobox pictures
+			_R = { "ID", "m" },	-- Required Radiobox fields
+			_L = { nOption = "RO" }	-- Radiobox list
+		},
+		General = {	-- General section
+			layer = "S",-- General string
+			nButton = "L", nSlider = "L", nListbox = "L", nTextbox = "L",	-- General list sizes
+			nCheckbox = "L", nRadiobox = "L", nPane = "L", nLayer = "L", nFrame = "L",	
+			_L = {	-- General lists
+				nButton = "Button", nSlider = "Slider", nListbox = "Listbox",
+				nTextbox = "Textbox", nCheckbox = "Checkbox", nRadiobox = "Radiobox",
+				nPane = "Pane", nLayer = "Layer", nFrame = ">layer"
+			}
+		}
+	},
+	PicProp = {},	-- List of picture properties
+	Cursors = { std = SDL.GetCursor() },-- Cursors
+	Keys = {},	-- Keyboard status
+	Cond = {}	-- Conditions(used to control certain tasks)
+};
+-----------------------------------------------------------
+-- Install data that requires data stored in the first go.
+-----------------------------------------------------------
+Main.Comp = {	-- Component lists
+	Frame = PrimeListbox(),	-- Frame list
+	Layer = PrimeListbox(),	-- Layer list
+	Pane = PrimeListbox(),	-- Pane list
+	Button = PrimeListbox(),-- Pane item lists
+	Slider = PrimeListbox(),
+	Listbox = PrimeListbox(),
+	Textbox = PrimeListbox(),
+	Checkbox = PrimeListbox(),
+	Radiobox = PrimeListbox()
+};
+--------------------------------------------------------
+-- Put a sentinel value at the start of the frame list.
+--------------------------------------------------------
+LB_AppendEntry(Main.Comp.Frame, "", nil, true);
+
+--------------------------------------------
+-- List of other members added at run-time.
+--------------------------------------------
+-- CursorX: Cursor x coordinate
+-- CursorY: Cursor y coordinate
+-- CurT: Current table, used to ease section management
+-- CurP: Current pane, likewise
+-- CurComp: Current component, used to assign properties
+-- CurCond: Current condition, used to assign conditions
+-- SaveC: Cache of Save; used to restore Save if we cancel out of a popup
+-- Save: If true, there are unsaved changes in the scene; nil/false otherwise
+-- Quit: If true, time to quit the editor; nil/false otherwise
+-- Msg: A text message; used by a section or popup when it is entered
+-- CurD: List of keys that have been pressed this run
+-- CurU: List of keys that have been released this run
+-- Tier: Tier currently being drawn; the editor uses tiers to facilitate modal popups
+-- ClipText: Used by cut/copy/paste operations

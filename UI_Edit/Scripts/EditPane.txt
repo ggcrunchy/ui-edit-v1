@@ -1,0 +1,294 @@
+----------------------------------------------
+-- EditPaneEnter
+-- Enters the edit pane section of the editor
+----------------------------------------------
+function EditPaneEnter ()
+	------------------------------------------------------------------
+	-- If we have not loaded the edit pane section, proceed to do so.
+	------------------------------------------------------------------
+	if not Main.S.EditPane then
+		--------------------------------
+		-- Draws the current user pane.
+		--------------------------------
+		local function _D_Cur (n, a, x, y, w, h)
+			---------------------------------
+			-- Draw the pane if we have one.
+			---------------------------------
+			local p = LB_GetSDatum(Main.Comp.Pane);
+			if p then
+				W_SetPictures(n, p.pD.p, p.pO.p, p.pG.p, p.pE.p);
+				DrawWidget(n, x, y, w, h);
+			end
+			local is = LB_Selection(Main.CurT.UsedItems);
+			if is then
+				------------------------------------------------------------------------
+				-- If we have grabbed the button, get the current cursor position, clip
+				-- it to the button, and convert it to get the region for the current
+				-- pane. If the button has been released, ungrab the button afterward.
+				------------------------------------------------------------------------
+				if Main.WP[n].g then
+					local x1, y1, x2, y2 = SortPairs(Main.WP[n].g.x, Main.WP[n].g.y, ClipBox(Main.CursorX - x, Main.CursorY - y, 0, 0, w, h));
+					local p = LB_GetEDatum(Main.CurT.UsedItems, is);
+					p.x, p.y, p.w, p.h = x1 / w, y1 / h, (x2 - x1) / w, (y2 - y1) / h;
+					if not Button.IsPushed(n) then
+						Main.WP[n].g = nil;
+					end
+				end
+				------------------------------------------------------------------------
+				-- Iterate through the items in use in the currently selected pane, and
+				-- draw a rectangle for each one, using their normal pictures. The
+				-- current item gets a red border; the others get a white border.
+				------------------------------------------------------------------------
+				for i, s, p in LB_Range(Main.CurT.UsedItems) do
+					local p = LB_GetEDatum(Main.CurT.UsedItems, i);
+					W_SetPictures(n, p.pD.p, nil, nil, nil);
+					local px, py, pw, ph = x + p.x * w, y + p.y * h, p.w * w, p.h * h;
+					DrawWidget(n, px, py, pw, ph);
+					if i == is then
+						Render.DrawBox(px, py, pw, ph, 1, 0, 0);
+					else
+						Render.DrawBox(px, py, pw, ph, 1, 1, 1);
+					end
+				end
+			end
+			Render.DrawBox(x, y, w, h, 1, 1, 1);
+		end
+		---------------------------------------------
+		-- Processes events for the add item button.
+		---------------------------------------------
+		local function _PE_A ()
+			local s = LB_GetSText(Main.CurT.FreeItems);
+			if s then
+				local p = LB_GetSText(Main.Comp.Pane);
+				if not p then
+					MessageBox("No pane to add to.");
+				else
+					-----------------------------------------------------------------
+					-- Put the item in the pane, starting at full size, refresh the
+					-- item lists, and indicate that there are unsaved changes.
+					-----------------------------------------------------------------
+					AddPaneItemToPane(p, s, 0, 0, 1, 1);
+					Main.Refresh[Main.Enters.n], Main.Save = true, true;
+				end
+			else
+				MessageBox("No items to add.");
+			end
+		end
+		------------------------------------------------
+		-- Processes events for the remove item button.
+		------------------------------------------------
+		local function _PE_R ()
+			local s = LB_GetSText(Main.CurT.UsedItems);
+			if s then
+				------------------------------------------------------------------------
+				-- Remove the item from the pane, refresh the item lists, and indicate
+				-- that there are unsaved changes.
+				------------------------------------------------------------------------
+				RemovePaneItemFromPane(s);				
+				Main.Refresh[Main.Enters.n], Main.Save = true, true;
+			else
+				MessageBox("No items to remove.");
+			end
+		end
+		---------------------------------------------------
+		-- Processes events for the current layer display.
+		---------------------------------------------------
+		local function _PE_Cur (n, e, a)
+			---------------------------------------------------------------------------
+			-- If we just pushed the button, we record the grab point. Since this will
+			-- change layer properties, there are unsaved changes.
+			---------------------------------------------------------------------------
+			local x, y, w, h = Widget.GetXYWH(n, true);
+			if e == Widget.ButtonPush and LB_Selection(Main.Comp.Pane) then
+				local cx, cy = UI.GetEventPoint();
+				Main.WP[n].g = { x = cx - x, y = cy - y };
+				Main.Save = true;
+			end
+		end
+		-------------------------------------------------
+		-- Create and install the layer and its widgets.
+		-------------------------------------------------
+		SetupSectionTable("EditPane", 0, 0, 1, 1, false);
+		SetupWidgetCore("Pane", EditPaneFeaturesEnter);
+		SetupButton("New", .3, .1, .2, .1, NewComponent("Pane"));
+		SetupButton("Delete", .3, .2, .2, .1, DeleteComponent("Pane", "No panes to delete."));
+		SetupButton("Add", .5, .1, .2, .1, PushButton(_PE_A));
+		SetupButton("Remove", .5, .2, .2, .1, PushButton(_PE_R));
+		SetupListbox("FreeItems", 3, .05, .4, .2, .2, LB_SelectNoRefresh);
+		SetupListboxUpButton(.25, .4, .05, .1, Main.CurT.FreeItems);
+		SetupListboxDownButton(.25, .5, .05, .1, Main.CurT.FreeItems);
+		SetupListbox("UsedItems", 3, .05, .7, .2, .2, LB_SelectNoRefresh);
+		SetupListboxUpButton(.25, .7, .05, .1, Main.CurT.UsedItems);
+		SetupListboxDownButton(.25, .8, .05, .1, Main.CurT.UsedItems);	
+		-----------------------------
+		-- Setup the display button.
+		-----------------------------
+		Main.CurT.Cur = PrimeButton();
+		AssignMethodsRaw(Main.CurT.Cur, _D_Cur, nil, _PE_Cur, nil);
+		Pane.AddItem(Main.CurP, Main.CurT.Cur, .3, .4, .4, .5);
+		------------------------------
+		-- Setup the help text links.
+		------------------------------	
+		SetupHelpText(.05, .325, .2, .05, "Used items", "EP_UsedItems");
+		SetupHelpText(.05, .625, .2, .05, "Free items", "EP_FreeItems");
+		SetupHelpText(.3125, .025, .175, .05, "Manage panes", "EP_ND");
+		SetupHelpText(.5125, .025, .175, .05, "Manage items", "EP_AR");
+		SetupHelpText(.3, .325, .4, .05, "Current pane", "EP_Cur");
+	end
+	----------------------
+	-- Enter the section.
+	----------------------
+	LoadSectionTable("EditPane");
+	-----------------------------------------------------------------------------------
+	-- On entry/refresh, build the lists of free items and items used by current pane.
+	-----------------------------------------------------------------------------------
+	if Main.Enter[Main.Tier] or Main.Refresh[Main.Tier] then
+		RefreshFreeList(Main.CurT.FreeItems, { "Button", "Slider", "Listbox", "Textbox", "Checkbox", "Radiobox" }, "pane");
+		RefreshUsedList(Main.CurT.UsedItems, "Pane", "items", Main.CurT.Cur);
+	end
+end
+
+-------------------------------------------------------
+-- EditPaneFeaturesEnter
+-- Enters the edit pane features section of the editor
+-------------------------------------------------------
+function EditPaneFeaturesEnter ()
+	---------------------------------------------------------------------------
+	-- If we have not loaded the edit pane features section, proceed to do so.
+	---------------------------------------------------------------------------
+	if not Main.S.EditPaneFeaturesEnter then
+		---------------------------------------
+		-- Processes events for the OK button.
+		---------------------------------------
+		local function _PE_OK ()
+			----------------------------------------------------------------------
+			-- Assign the chosen focus chain to the current pane. Exit the popup.
+			----------------------------------------------------------------------
+			local fc = { n = 0 };
+			for i, s, d in LB_Range(Main.CurT.UsedItems, 1) do
+				table.insert(fc, s);
+			end
+			LB_GetSDatum(Main.Comp.Pane).focus = fc;
+			ClosePopup();
+		end
+		-------------------------------------------
+		-- Processes events for the cancel button.
+		-------------------------------------------
+		local function _PE_C ()
+			------------------------------------------------------------------------
+			-- Restore the cached pane data and the save indicator. Exit the popup.
+			------------------------------------------------------------------------
+			local p, d = LB_GetSDatum(Main.Comp.Pane), Main.CurT.Data;
+			p.bDrag, p.bBackOnDelete, Main.Save = d.bDrag, d.bBOD, Main.SaveC;
+			ClosePopup();
+		end
+		---------------------------------------------
+		-- Processes events for the add item button.
+		---------------------------------------------
+		local function _PE_A ()
+			local sf, su = LB_Selection(Main.CurT.FreeItems), LB_Selection(Main.CurT.UsedItems);
+			if sf then
+				------------------------------------------------------------------------
+				-- Move the item from the free list to the used list, and indicate that
+				-- there are unsaved changes.
+				-------------------------------------------------------------------------
+				LB_AddEntry(Main.CurT.UsedItems, su + 1, LB_GetSText(Main.CurT.FreeItems), nil, false);
+				LB_RemoveEntry(Main.CurT.FreeItems, sf);
+				Main.Save = true;
+			else
+				MessageBox("No items to add to chain.");
+			end
+		end
+		------------------------------------------------
+		-- Processes events for the remove item button.
+		------------------------------------------------
+		local function _PE_R ()
+			local su = LB_Selection(Main.CurT.UsedItems);
+			if LB_GetEText(Main.CurT.UsedItems, su) ~= "" then
+				------------------------------------------------------------------------
+				-- Move the item from the used list to the free list, and indicate that
+				-- there are unsaved changes.
+				------------------------------------------------------------------------
+				LB_AppendEntry(Main.CurT.FreeItems, LB_GetSText(Main.CurT.UsedItems), nil, true);
+				LB_RemoveEntry(Main.CurT.UsedItems, su);
+				Main.Save = true;
+			else
+				MessageBox("Sentinel item: cannot remove.");
+			end
+		end
+		---------------------------------------
+		-- Responds to pane allow drag toggle.
+		---------------------------------------
+		local function _DragT (c)
+			-------------------------------------------------------
+			-- Toggle the drag flag, and indicate unsaved changes.
+			-------------------------------------------------------
+			LB_GetSDatum(Main.Comp.Pane).bDrag, Main.Save = c, true;
+		end
+		-------------------------------------------
+		-- Responds to pane back on delete toggle.
+		-------------------------------------------
+		local function _BODT (c)
+			-----------------------------------------------------------------
+			-- Toggle the back on delete flag, and indicate unsaved changes.
+			-----------------------------------------------------------------
+			LB_GetSDatum(Main.Comp.Pane).bBackOnDelete, Main.Save = c, true;
+		end
+		-------------------------------------------------
+		-- Create and install the layer and its widgets.
+		-------------------------------------------------
+		SetupSectionTable("EditPaneFeaturesEnter", 0, 0, .6, .6, true);
+		SetupButton("Add", .35, .175, .3, .2, PushButton(_PE_A));
+		SetupButton("Remove", .65, .175, .3, .2, PushButton(_PE_R));
+		SetupButton("OK", 0, .8, .3, .2, PushButton(_PE_OK));
+		SetupButton("Cancel", .3, .8, .3, .2, LeavePopupCancel);
+		SetupCheckbox("Drag", .4, .425, .075, .075, ToggleCheckbox(_DragT));
+		SetupCheckbox("BOD", .4, .525, .075, .075, ToggleCheckbox(_BODT));
+		SetupListbox("FreeItems", 3, .05, .15, .25, .25, LB_SelectNoRefresh);
+		SetupListboxUpButton(.3, .15, .05, .125, Main.CurT.FreeItems);
+		SetupListboxDownButton(.3, .275, .05, .125, Main.CurT.FreeItems);
+		SetupListbox("UsedItems", 3, .05, .55, .25, .25, LB_SelectNoRefresh);
+		SetupListboxUpButton(.3, .55, .05, .125, Main.CurT.UsedItems);
+		SetupListboxDownButton(.3, .675, .05, .125, Main.CurT.UsedItems);
+		------------------------------
+		-- Setup the help text links.
+		------------------------------
+		SetupHelpText(.05, .425, .25, .1, "Focus chain", "EP_FC");
+		SetupHelpText(.05, .025, .25, .1, "Free items", "EP_NFItems");
+		SetupHelpText(.35, .025, .6, .1, "Manage items", "EP_FAR");
+		SetupHelpText(.5, .425, .25, .075, "Draggable", "EP_Drag", false);
+		SetupHelpText(.5, .525, .25, .075, "Roll back", "EP_BOD", false);
+	end
+	--------------------
+	-- Enter the popup.
+	--------------------
+	LoadSectionTable("EditPaneFeaturesEnter");
+	--------------------------------------------------------------------------------
+	-- On entry, build the lists of non-focus and focus items used by current pane, 
+	-- prepare the pane, and allow for a cancel.
+	--------------------------------------------------------------------------------
+	if Main.Enter[Main.Tier] then
+		LB_Clear(Main.CurT.FreeItems);
+		LB_Clear(Main.CurT.UsedItems);
+		LB_AppendEntry(Main.CurT.UsedItems, "", nil, true);
+		local p, ui = LB_GetSDatum(Main.Comp.Pane), {};
+		for i, v in ipairs(p.focus) do
+			ui[v] = true;
+			LB_AppendEntry(Main.CurT.UsedItems, v, nil, false);
+		end
+		for k, v in pairs(p.items) do
+			if not ui[k] then
+				LB_AppendEntry(Main.CurT.FreeItems, k, nil, true);
+			end
+		end
+		-------------------------
+		-- Cache the pane state. 
+		-------------------------
+		Main.CurT.Data = { bDrag = p.bDrag, bBOD = p.bBackOnDelete };
+		-----------------------------------------------------
+		-- Setup the checkboxes to reflect the current pane.
+		-----------------------------------------------------
+		Checkbox.Check(Main.CurT.Drag, p.bDrag);
+		Checkbox.Check(Main.CurT.BOD, p.bBackOnDelete);
+	end
+end

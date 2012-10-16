@@ -1,0 +1,105 @@
+---------------------------------------------
+-- LoadSceneEnter
+-- Enters the load scene popup of the editor
+---------------------------------------------
+function LoadSceneEnter ()
+	-----------------------------------------------------------------
+	-- If we have not loaded the load scene popup, proceed to do so.
+	-----------------------------------------------------------------
+	if not Main.S.LoadScene then
+		-----------------------------------------
+		-- Processes events for the load button.
+		-----------------------------------------
+		local function _PE_L ()
+			-------------------------
+			-- Task to load a scene.
+			-------------------------
+			local function _T_Load ()
+				---------------------------------------------------------------------
+				-- If allowed to load, do so and discard this task. If told to wait,
+				-- keep the task around. Otherwise, get rid of the task.
+				---------------------------------------------------------------------
+				if Main.Cond["L"] == "Do" then
+					--------------------------------------------------
+					-- Try to open the file, failing if unsuccessful.
+					--------------------------------------------------
+					local f = io.open(string.format("Scenes/%s", LB_GetSText(Main.CurT.SL)), "r");
+					if f then
+						-------------------------
+						-- Unload current scene.
+						-------------------------
+						UnloadScene();
+						--------------------------
+						-- Prepare the load data.
+						--------------------------
+						local ld = { s = { n = 0 }, b = {}, l = 0 };
+						table.insert(ld.s, { cd = ld.b, s = "General" });
+						-----------------------------------------------------
+						-- Read the scene until the end of file or an error.
+						-----------------------------------------------------
+						while ReadScene(f, ld) do end;		
+						------------------------------------------------------------
+						-- If we are okay so far, make sure the data is consistent.
+						------------------------------------------------------------
+						if not ld.error then
+							VerifyScene(ld);
+						end
+						----------------------------------------------------------
+						-- If all is well, load the scene with the provided data.
+						----------------------------------------------------------
+						if not ld.error then
+							LoadScene(ld);
+						else
+							MessageBox(string.format("Error: %s", ld.error));
+						end
+						-------------------------------------------------------------
+						-- Close up, and indicate that there are no changes to save.
+						-------------------------------------------------------------
+						f:close();
+						Main.Save = false;
+					else
+						MessageBox(string.format("Unable to open file: %s", LB_GetSText(Main.CurT.SL)));
+					end	
+				elseif Main.Cond["L"] == "Wait" then
+					return false;
+				end
+				return true;
+			end
+			----------------------------------------------------------------------
+			-- Install the load task. If we have unsaved changes, prompt the user 
+			-- with an OK/Cancel popup.
+			----------------------------------------------------------------------
+			if LB_Selection(Main.CurT.SL) then
+				Main.Cond["L"] = "Do";
+				PrependTask(_T_Load);
+				if Main.Save then
+					OKCancel("Some changes are unsaved. Load scene anyway?", "L");
+				end
+			else
+				MessageBox("No scene files available.");
+			end
+		end
+		-------------------------------------------------
+		-- Create and install the layer and its widgets.
+		-------------------------------------------------
+		SetupSectionTable("LoadScene", 0, 0, .4, .3, true);
+		SetupButton("Load", .725, .225, .25, .2, PushButton(_PE_L));
+		SetupButton("OK", 0, .8, .35, .2, LeavePopup);
+		SetupListbox("SL", 2, .45, .65, .35, .3, LB_SelectNoRefresh);
+		SetupListboxUpButton(.85, .65, .1, .15, Main.CurT.SL);
+		SetupListboxDownButton(.85, .8, .1, .15, Main.CurT.SL);
+	end
+	--------------------
+	-- Enter the popup.
+	--------------------
+	LoadSectionTable("LoadScene");
+	----------------------------------------
+	-- On entry, enumerate the scene files.
+	----------------------------------------
+	if Main.Enter[Main.Tier] then
+		LB_Clear(Main.CurT.SL);
+		for i, t in ipairs(ScanFolder("Scenes")) do
+			LB_AppendEntry(Main.CurT.SL, t, nil, true);
+		end
+	end
+end

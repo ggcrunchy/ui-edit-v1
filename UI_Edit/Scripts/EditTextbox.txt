@@ -1,0 +1,291 @@
+-------------------------------------------------
+-- EditTextboxEnter
+-- Enters the edit textbox section of the editor
+-------------------------------------------------
+function EditTextboxEnter ()
+	---------------------------------------------------------------------
+	-- If we have not loaded the edit textbox section, proceed to do so.
+	---------------------------------------------------------------------
+	if not Main.S.EditTextbox then
+		-------------------------------------------------
+		-- Create and install the layer and its widgets.
+		-------------------------------------------------
+		SetupSectionTable("EditTextbox", 0, 0, 1, 1, false);
+		SetupPaneItemCore("Textbox", "No textboxes to delete.", _D_Cur, nil, EditTextboxFeaturesEnter);
+		------------------------------
+		-- Setup the textbox display.
+		------------------------------
+		Main.CurT.T = PrimeTextbox();
+		W_SetText(Main.CurT.T, Main.T24, 0);
+		MapMethods(Main.CurT.T, "HText", "HText", nil, nil);
+		Textbox.AllowSpotClick(Main.CurT.T, false);
+		Textbox.AllowDragOver(Main.CurT.T, false);
+		Pane.AddItem(Main.CurP, Main.CurT.T, .05, .3, .65, .65);
+		---------------------------------------------------
+		-- Load textbox-specific picture property entries.
+		---------------------------------------------------
+		table.insert(Main.PicProp["Textbox"], { s = "Selection", p = "pS" });
+		table.insert(Main.PicProp["Textbox"], { s = "Cursor", p = "pC" });
+	end
+	----------------------
+	-- Enter the section.
+	----------------------
+	LoadSectionTable("EditTextbox");
+	---------------------------------------
+	-- On entry/refresh, load the textbox.
+	---------------------------------------
+	if Main.Enter[Main.Tier] or Main.Refresh[Main.Tier] then
+		TB_Load(Main.CurT.T, LB_GetSDatum(Main.Comp.Textbox));
+	end
+end
+
+------------------------------------------------------------
+-- EditTextboxFeaturesEnter
+-- Enters the edit textbox properties section of the editor
+------------------------------------------------------------
+function EditTextboxFeaturesEnter ()
+	--------------------------------------------------------------------------------
+	-- If we have not loaded the edit textbox properties section, proceed to do so.
+	--------------------------------------------------------------------------------
+	if not Main.S.EditTextboxFeatures then
+		-------------------------------------------
+		-- Processes events for the cancel button.
+		-------------------------------------------
+		local function _PE_C ()
+			---------------------------------------------------------------------------
+			-- Restore the cached textbox data and the save indicator. Exit the popup.
+			---------------------------------------------------------------------------
+			local t = LB_GetSDatum(Main.Comp.Textbox);
+			RestoreTextbox(t, Main.CurT.Data);
+			TB_Load(Main.S.EditTextbox.T, t);
+			Main.Save = Main.SaveC;
+			ClosePopup();
+		end
+		------------------------------------------------
+		-- Processes events for the set timeout button.
+		------------------------------------------------
+		local function _PE_STO ()
+			----------------------------------------------------------------------------
+			-- If the timeout is a 32-bit integer, set it and indicate unsaved changes.
+			----------------------------------------------------------------------------
+			local n = TB_GetNumber(Main.CurT.TO);
+			if n and n < 2^32 then
+				LB_GetSDatum(Main.Comp.Textbox).timeout = n;
+				Main.Refresh[Main.Tier - 1], Main.Save = true, true;
+			else
+				MessageBox("Context must be a 32-bit unsigned integer.");
+			end
+		end
+		-----------------------------------------------------------------
+		-- Processes events for the decrease max character count button.
+		-----------------------------------------------------------------
+		local function _PE_DMCC ()
+			local t = LB_GetSDatum(Main.Comp.Textbox);
+			if t.max ~= 0 then
+				UpdateTextboxFeatures("max", t.max - 1)
+			end
+		end
+		------------------------------------------------------
+		-- Processes events for the increase capacity button.
+		------------------------------------------------------
+		local function _PE_IMCC ()
+			UpdateTextboxFeatures("max", LB_GetSDatum(Main.Comp.Textbox).max + 1);
+		end
+		----------------------------------------------------
+		-- Processes events for the decrease offset button.
+		----------------------------------------------------
+		local function _PE_DO ()
+			local t = LB_GetSDatum(Main.Comp.Textbox);
+			if t.offset ~= 0 then
+				UpdateTextboxFeatures("offset", t.offset - 1);
+			end
+		end
+		----------------------------------------------------
+		-- Processes events for the increase offset button.
+		----------------------------------------------------
+		local function _PE_IO ()
+			local t = LB_GetSDatum(Main.Comp.Textbox);
+			if t.offset + 1 < string.len(t.text) then
+				UpdateTextboxFeatures("offset", t.offset + 1);
+			end
+		end
+		----------------------------------------------------
+		-- Processes events for the decrease cursor button.
+		----------------------------------------------------
+		local function _PE_DC ()
+			local t = LB_GetSDatum(Main.Comp.Textbox);
+			if t.cursor ~= 0 then
+				UpdateTextboxFeatures("cursor", t.cursor - 1);
+			end
+		end
+		----------------------------------------------------
+		-- Processes events for the increase cursor button.
+		----------------------------------------------------
+		local function _PE_IC ()
+			local t = LB_GetSDatum(Main.Comp.Textbox);
+			if t.cursor + 1 <= string.len(t.text) then
+				UpdateTextboxFeatures("cursor", t.cursor + 1);
+			end
+		end
+		-------------------------------------------------------------
+		-- Processes events for the decrease selection start button.
+		-------------------------------------------------------------
+		local function _PE_DSS ()
+			local t = LB_GetSDatum(Main.Comp.Textbox);
+			if t.selectIndex ~= 0 then
+				UpdateTextboxFeatures("selectIndex", t.selectIndex - 1);
+			end
+		end
+		-------------------------------------------------------------
+		-- Processes events for the increase selection start button.
+		-------------------------------------------------------------
+		local function _PE_ISS ()
+			local t = LB_GetSDatum(Main.Comp.Textbox);
+			if t.selectCount ~= 0 and t.selectIndex + 1 < string.len(t.text) then
+				UpdateTextboxFeatures("selectIndex", t.selectIndex + 1);
+			end
+		end
+		-------------------------------------------------------------
+		-- Processes events for the decrease selection count button.
+		-------------------------------------------------------------
+		local function _PE_DSC ()
+			local t = LB_GetSDatum(Main.Comp.Textbox);
+			if t.selectCount ~= 0 then
+				UpdateTextboxFeatures("selectCount", t.selectCount - 1);
+			end
+		end
+		-------------------------------------------------------------
+		-- Processes events for the increase selection count button.
+		-------------------------------------------------------------
+		local function _PE_ISC ()
+			local t = LB_GetSDatum(Main.Comp.Textbox);
+			if t.selectIndex + t.selectCount < string.len(t.text) then
+				UpdateTextboxFeatures("selectCount", t.selectCount + 1);
+			end
+		end		
+		--------------------------------------------
+		-- Responds to checkbox allow click toggle.
+		--------------------------------------------
+		local function _ClickT (c)
+			--------------------------------------------------------
+			-- Toggle the click flag, and indicate unsaved changes.
+			--------------------------------------------------------
+			LB_GetSDatum(Main.Comp.Textbox).bClick, Main.Save = c, true;
+		end
+		------------------------------------------------
+		-- Responds to checkbox allow drag over toggle.
+		------------------------------------------------
+		local function _DragOverT (c)
+			-------------------------------------------------------
+			-- Toggle the drag flag, and indicate unsaved changes.
+			-------------------------------------------------------
+			LB_GetSDatum(Main.Comp.Textbox).bDragOver, Main.Save = c, true;	
+		end
+		-----------------------------------------------
+		-- Static text for displaying feature amounts.
+		-----------------------------------------------
+		local function _ST (f, x, y, w, h)
+			-----------------------------------------------------------------
+			-- Closure used to display desired property and preferred value.
+			-----------------------------------------------------------------
+			local function _D_ST (n, a, x, y, w, h)
+				Render.DrawPicture(Main.P.blue, x, y, w, h);
+				DrawString(string.format("%i", LB_GetSDatum(Main.Comp.Textbox)[f]), Main.T24, x, y, w, h);
+				Render.DrawBox(x, y, w, h, 1, 1, 1);
+			end
+			-------------------------------------------
+			-- Setup static text as image-less button.
+			-------------------------------------------
+			local b = PrimeButton();
+			AssignMethodsRaw(b, _D_ST, nil, nil, nil);
+			Pane.AddItem(Main.CurP, b, x, y, w, h);
+		end
+		-------------------------------------------------
+		-- Create and install the layer and its widgets.
+		-------------------------------------------------
+		SetupSectionTable("EditTextboxFeatures", 0, 0, .6, .8, true);
+		SetupButton("OK", 0, .9, .3, .1, LeavePopup);
+		SetupButton("Cancel", .3, .9, .3, .1, PushButton(_PE_C));
+		SetupButton("Set", .45, .3, .375, .1, PushButton(_PE_STO));
+		SetupButton("-", .65, .5, .05, .075, PushButton(_PE_DMCC));
+		SetupButton("+", .7, .5, .05, .075, PushButton(_PE_IMCC));
+		SetupButton("-", .375, .6, .05, .075, PushButton(_PE_DO));
+		SetupButton("+", .425, .6, .05, .075, PushButton(_PE_IO));
+		SetupButton("-", .85, .6, .05, .075, PushButton(_PE_DC));
+		SetupButton("+", .9, .6, .05, .075, PushButton(_PE_IC));
+		SetupButton("-", .575, .7, .05, .075, PushButton(_PE_DSS));
+		SetupButton("+", .625, .7, .05, .075, PushButton(_PE_ISS));
+		SetupButton("-", .575, .8, .05, .075, PushButton(_PE_DSC));
+		SetupButton("+", .625, .8, .05, .075, PushButton(_PE_ISC));
+		SetupCheckbox("Click", .05, .425, .05, .05, ToggleCheckbox(_ClickT));
+		SetupCheckbox("DragOver", .45, .425, .05, .05, ToggleCheckbox(_DragOverT));		
+		SetupTextbox("S", 0, "", .05, .1, .9, .1, true);
+		SetupTextbox("TO", 10, "", .05, .3, .375, .1, true);
+		_ST("max", .525, .5, .1, .075);
+		_ST("offset", .25, .6, .1, .075);
+		_ST("cursor", .725, .6, .1, .075);
+		_ST("selectIndex", .45, .7, .1, .075);
+		_ST("selectCount", .45, .8, .1, .075);
+		------------------------------
+		-- Setup the help text links.
+		------------------------------
+		SetupHelpText(.05, .025, .9, .05, "Text string:", "ET_Text", true);
+		SetupHelpText(.05, .225, .775, .05, "Timeout:", "ET_TO", true);
+		SetupHelpText(.125, .425, .3, .05, "Clickable", "ET_Click", false);
+		SetupHelpText(.525, .425, .3, .05, "Dragoverable", "ET_DragOver", false);	
+		SetupHelpText(.05, .5, .45, .075, "Max character count:", "ET_Max", true);
+		SetupHelpText(.05, .6, .175, .075, "Offset:", "ET_O", true);
+		SetupHelpText(.525, .6, .175, .075, "Cursor:", "ET_C", true);
+		SetupHelpText(.05, .7, .375, .075, "Selection start:", "ET_SS", true);
+		SetupHelpText(.05, .8, .375, .075, "Selection count:", "ET_SC", true);
+		--------------------------
+		-- Setup the focus chain.
+		--------------------------
+		Pane.LoadFocusChain(Main.CurP, Main.CurT.S, Main.CurT.TO, false);
+	end
+	--------------------
+	-- Enter the popup.
+	--------------------
+	LoadSectionTable("EditTextboxFeatures");
+	local t = LB_GetSDatum(Main.Comp.Textbox);
+	---------------------------------------------------------------------------------
+	-- On entry, setup the focus chain, prepare the textbox, and allow for a cancel.
+	---------------------------------------------------------------------------------
+	if Main.Enter[Main.Tier] then
+		--------------------------------------------------------
+		-- Install the textbox trap for the edit textbox chain.
+		--------------------------------------------------------
+		TextboxChainPrime(PaneItem.GetPane(Main.CurT.S));
+		----------------------------
+		-- Cache the textbox state. 
+		----------------------------
+		Main.CurT.Data = CacheTextbox(t);
+		----------------------------------------------------------------------
+		-- Setup the checkboxes and textboxes to reflect the current textbox.
+		----------------------------------------------------------------------
+		Checkbox.Check(Main.CurT.Click, t.bClick);
+		Checkbox.Check(Main.CurT.DragOver, t.bDragOver);
+		Textbox.SetMaxCharCount(Main.CurT.S, t.max);
+		TB_SetString(Main.CurT.S, t.text);
+		TB_SetString(Main.CurT.TO, t.timeout);
+	end
+	--------------------------------------------------------------------------------
+	-- If the text string differs, update the textbox and indicate unsaved changes.
+	--------------------------------------------------------------------------------
+	local s = TB_GetString(Main.CurT.S);
+	if t.text ~= s then
+		t.text, Main.Refresh[Main.Tier], Main.Save = s, true, true;
+		TB_Load(Main.S.EditTextbox.T, t);
+	end
+	--------------------------------------------------
+	-- On entry/refresh, update the textbox features.
+	--------------------------------------------------
+	if Main.Enter[Main.Tier] or Main.Refresh[Main.Tier] then
+		local T = Main.S.EditTextbox.T;
+		t.max, t.text = Textbox.GetMaxCharCount(T), TB_GetString(T);
+		t.selectCount, t.selectIndex = TB_GetSelect(T);
+		t.offset, t.cursor = Textbox.GetOffset(T), Textbox.GetCursor(T);
+		if not t.selectIndex then t.selectIndex = 0 end;
+		Textbox.SetMaxCharCount(Main.CurT.S, t.max);
+	end
+end

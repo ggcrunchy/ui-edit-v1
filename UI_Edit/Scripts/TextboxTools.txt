@@ -1,0 +1,487 @@
+---------------------------------------------------
+-- PrimeTextbox
+-- Creates and primes a textbox and its properties
+-- Returns: Name used to reference textbox
+---------------------------------------------------
+function PrimeTextbox ()
+	local t = Textbox.Create();
+	Main.WP[t] = {};
+	return t;
+end
+
+-----------------------------------
+-- SetupTextbox
+-- General textbox setup procedure
+-- v: Table variable
+-- m: Maximum character count
+-- s: String to assign to textbox
+-- x, y: Button coordinates
+-- w, h: Button dimensions
+-- c: Clickable boolean
+-----------------------------------
+function SetupTextbox (v, m, s, x, y, w, h, c)
+	local t = PrimeTextbox();
+	W_SetText(t, Main.T24, 0);
+	W_SetProperty(t, "pS", Main.P.blue);
+	W_SetProperty(t, "pC", Main.P.white);
+	W_SetProperty(t, "timeout", 300);
+	W_SetProperty(t, "blink", false);
+	Textbox.SetMaxCharCount(t, m);
+	Textbox.SetSubstr(t, 0, s, string.len(s), true);
+	MapMethods(t, "HText", "HText", "HText", "HText");
+	Pane.AddItem(Main.CurP, t, x, y, w, h);
+	Main.CurT[v] = t;
+end
+
+-------------------------------------------------------------------
+-- TB_IsBlinked
+-- Determines whether a textbox cursor is blinked out
+-- t: Name used to reference textbox
+-- Returns: A boolean indicating whether the cursor is blinked out
+-------------------------------------------------------------------
+function TB_IsBlinked (t)
+	local wp, tc = Main.WP[t], SDL.GetTicks();
+	----------------------------------------------
+	-- If there is no timeout, the cursor is out.
+	----------------------------------------------
+	if wp.timeout == 0 then return true end;
+	-------------------------------------------------------
+	-- Initialize the time and blink members if necessary.
+	-------------------------------------------------------
+	if not wp.time then
+		wp.time, wp.blink = tc, false;
+	end
+	-----------------------------------------------------------------------
+	-- If the timeout has elapsed, reset the counter and toggle the blink.
+	-----------------------------------------------------------------------
+	if tc - wp.time > wp.timeout then
+		wp.time, wp.blink = tc, not wp.blink;
+	end
+	-----------------------------
+	-- Indicate the blink state.
+	-----------------------------
+	return Main.WP[t].blink;
+end
+
+---------------------------------------------------------------------
+-- TB_SetString
+-- Sets a textbox's string, rewinds its offset and places the cursor
+-- t: Name used to reference textbox
+-- s: Textbox string
+-- e: If true, put the cursor at the end
+---------------------------------------------------------------------
+function TB_SetString (t, s, e)
+	Textbox.DeleteSubstr(t, 0, Textbox.GetCharCount(t));
+	Textbox.SetSubstr(t, 0, s, string.len(s), true);
+	if e then
+		Textbox.SetCursor(t, string.len(s));
+	end
+end
+
+-------------------------------------
+-- TB_GetString
+-- Gets a textbox's string in full
+-- t: Name used to reference textbox
+-- Returns: The textbox string
+-------------------------------------
+function TB_GetString (t)
+	return Textbox.GetSubstr(t, 0, Textbox.GetCharCount(t));
+end
+
+-------------------------------------------
+-- TB_GetNumber
+-- Gets a number from textbox's string
+-- t: Name used to reference textbox
+-- Returns: The textbox string as a number
+-------------------------------------------
+function TB_GetNumber (t)
+	local s, c, n = TB_GetString(t);
+	for i = 1, c do
+		if n then
+			n = n * 10;
+		else
+			n = 0;
+		end
+		local d = tonumber(string.sub(s, i, i));
+		if not d then return nil end;
+		n = n + d;
+	end
+	return n;
+end
+
+------------------------------------------
+-- TB_GetSelect
+-- Gets the selection values
+-- t: Name used to reference textbox
+-- Returns: The selection count and start
+------------------------------------------
+function TB_GetSelect (t)
+	return Textbox.GetSelectCount(t), Textbox.GetSelectStart(t);
+end
+
+-------------------------------------
+-- TB_AddText
+-- Adds text to a textbox
+-- t: Name used to reference textbox
+-- s: Text string to add
+-------------------------------------
+function TB_AddText (t, s)
+	-----------------------------------------------------
+	-- If there is a selection, we want to overwrite it.
+	-----------------------------------------------------
+	local sc = Textbox.GetSelectCount(t);
+	if sc ~= 0 then
+		TB_RemoveText(t, false);
+	end
+	------------------------------------------------------
+	-- Add the text, and put the cursor at the end of it.
+	------------------------------------------------------
+	local c = Textbox.SetSubstr(t, Textbox.GetCursor(t), s, string.len(s), true);
+	Textbox.SetCursor(t, Textbox.GetCursor(t) + c);
+	--------------------------------------------
+	-- Indicate that there are unsaved changes.
+	--------------------------------------------
+	Main.Save = true;
+end
+
+-------------------------------------
+-- TB_RemoveText
+-- Removes text from a textbox
+-- t: Name used to reference textbox
+-- b: If true, backspace
+-------------------------------------
+function TB_RemoveText (t, b)
+	-------------------------------------------------------------------------------------
+	-- If there is a selection, we delete it and put the cursor at the start of where it
+	-- was. Otherwise, we delete the character at the cursor position, noting that we
+	-- first move the cursor back one spot for a backspace.
+	-------------------------------------------------------------------------------------
+	local sc, ss = TB_GetSelect(t);
+	if sc ~= 0 then
+		Textbox.DeleteSubstr(t, ss, sc);
+		Textbox.SetCursor(t, ss);
+	else
+		local c = Textbox.GetCursor(t);
+		if b then c = c - 1 end;
+		Textbox.DeleteChar(t, c); 
+	end
+	--------------------------------------------
+	-- Indicate that there are unsaved changes.
+	--------------------------------------------
+	Main.Save = true;
+end
+
+-----------------------------------------------------------
+-- TB_Range
+-- Builds an iterator over a textbox range
+-- t: Textbox to iterate over
+-- arg[1](...): Start index; if blank, start at 0
+-- arg[2](...): Range count; if blank, use character count
+-- Returns: Iterator which returns index and character
+-----------------------------------------------------------
+function TB_Range (t, ...)
+	------------------------------------------------------------------------------------
+	-- Setup some upvalues for the iterator. Get any non-default values that are given, 
+	-- and clamp the range to [0,size).
+	------------------------------------------------------------------------------------
+	local n, s, c = Textbox.GetCharCount(t), arg[1], arg[2];
+	if not s then s = 0 end;
+	if not c then c = n end;
+	local e = s + c;
+	if e > n then e = n end;
+	-------------------------------------------------------------------------------------
+	-- Builds the iterator closure. This returns the index and character that is indexed 
+	-- by the second argument plus one; we terminate when this index extends beyond the 
+	-- range. The iterator keeps no state, and begins with an index one less than the 
+	-- start of the range(it will be coerced into the start when we add one).
+	-------------------------------------------------------------------------------------
+	local function _I (state, i)
+		if i + 1 >= e then return nil end;
+		return i + 1, Textbox.GetChar(t, i + 1);
+	end
+	return _I, nil, s - 1;
+end
+
+------------------------------------------------
+-- TB_Load
+-- Loads a textbox with user textbox properties
+-- t: Name used to reference textbox
+-- tp: Textbox properties
+------------------------------------------------
+function TB_Load (t, tp)
+	if tp then
+		W_SetPictures(t, tp.pD.p, tp.pO.p, tp.pG.p, tp.pE.p);
+		W_SetProperty(t, "pS", tp.pS.p);
+		W_SetProperty(t, "pC", tp.pC.p);
+		W_SetProperty(t, "timeout", tp.timeout);
+		W_SetText(t, Main.T24, 0);
+		Textbox.SetMaxCharCount(t, tp.max);
+		TB_SetString(t, tp.text, false);
+		Textbox.SelectSubstr(t, tp.selectIndex, tp.selectCount);
+		Textbox.SetOffset(t, tp.offset);
+		Textbox.SetCursor(t, tp.cursor);
+	else
+		Textbox.SetMaxCharCount(t, 0);
+		W_SetPictures(t, nil, nil, nil, nil);
+		W_SetProperty(t, "pS", nil);
+		W_SetProperty(t, "pC", nil);
+		W_SetProperty(t, "timeout", 0);
+	end
+end
+
+-------------------------------------
+-- TextboxChainPrime
+-- Sets up a textbox chain in a pane 
+-- p: Pane with textbox chain
+-------------------------------------
+function TextboxChainPrime (p)
+	---------------------------------------
+	-- Trap for key events sent to textbox
+	---------------------------------------
+	local function _KT (kb)
+		------------------------------------------------------------------
+		-- Refresh the focus, and react to key down events in the buffer.
+		------------------------------------------------------------------
+		P_SetFocus(p, "Cur");
+		local t = P_GetFocus(p);
+		for i, k in ipairs(kb) do
+			local ctrl = SDL.And(k.mod, SDL.KMOD_CTRL) ~= 0;
+			if Main.CurD[k.sym] then
+				-----------------------------------------------------------------------
+				-- If Tab is pressed, move the focus to the next textbox in the chain, 
+				-- and get the new focus item.
+				-----------------------------------------------------------------------
+				if k.sym == SDL.K_TAB then
+					P_SetFocus(p, "Next");
+					t = P_GetFocus(p);
+				----------------------------------------------------------------------
+				-- If Ctrl-X is pressed, cut the selected text. If Ctrl-C is pressed,
+				-- copy the selected text. If this text is not the empty string, put
+				-- it in the clipboard.
+				----------------------------------------------------------------------
+				elseif (k.sym == SDL.K_x or k.sym == SDL.K_c) and ctrl then
+					local ct = Textbox.GetSelectionSubstr(t);
+					if ct ~= "" then
+						Main.ClipText = ct;
+						if k.sym == SDL.K_x then
+							TB_RemoveText(t, false);
+						end
+					end
+				--------------------------------------------------------------
+				-- If Ctrl-V is pressed, paste in the clipboard text, if any.
+				--------------------------------------------------------------
+				elseif k.sym == SDL.K_v and ctrl then
+					if Main.ClipText then
+						TB_AddText(t, Main.ClipText);
+					end
+				--------------------------------------------------------------------
+				-- If Backspace is pressed, delete the selection, or the character 
+				-- before the cursor if there is none. If Delete is pressed, delete 
+				-- the selection, or the character at the cursor if there is none.
+				--------------------------------------------------------------------
+				elseif k.sym == SDL.K_BACKSPACE or k.sym == SDL.K_DELETE then
+					TB_RemoveText(t, k.sym == SDL.K_BACKSPACE);
+				--------------------------------------------------------------------
+				-- If Left is pressed, move the cursor back one spot if there is no 
+				-- selection; otherwise, clear the selection and put the cursor at
+				-- the start of where the selection was.
+				--------------------------------------------------------------------
+				elseif k.sym == SDL.K_LEFT then
+					local sc, ss = TB_GetSelect(t);
+					if sc ~= 0 then
+						Textbox.RemoveSelection(t);
+						Textbox.SetCursor(t, ss);
+					else
+						Textbox.SetCursor(t, Textbox.GetCursor(t) - 1);
+					end
+				----------------------------------------------------------------------
+				-- If Right is pressed, move the cursor ahead one spot if there is no
+				-- selection; otherwise, clear the selection and put the cursor after
+				-- where the selection was.
+				----------------------------------------------------------------------
+				elseif k.sym == SDL.K_RIGHT then
+					local sc, ss = TB_GetSelect(t);
+					if sc ~= 0 then
+						Textbox.RemoveSelection(t);
+						Textbox.SetCursor(t, ss + sc);
+					else
+						Textbox.SetCursor(t, Textbox.GetCursor(t) + 1);
+					end
+				----------------------------------------------------------------------
+				-- If letter, numeral, Underscore, or Space keys are pressed, add the
+				-- corresponding character to the text. In the case of letters, we
+				-- also perform capitalization according to the state of the Shift
+				-- and Caps Lock modifiers: if both are in the same state, we use
+				-- lowercase; otherwise uppercase. 
+				----------------------------------------------------------------------
+				elseif (k.sym >= SDL.K_a and k.sym <= SDL.K_z) or (k.sym >= SDL.K_0 and k.sym <= SDL.K_9) or k.sym == SDL.K_UNDERSCORE or k.sym == SDL.K_SPACE then
+					local c, s = string.char(k.sym), SDL.And(k.mod, SDL.KMOD_SHIFT) ~= 0;
+					if SDL.Test(k.mod, SDL.KMOD_CAPS) ~= s then
+						c = string.upper(c);
+					end
+					TB_AddText(t, c);
+				end
+			end
+		end
+	end
+	-------------------------
+	-- Install the key trap.
+	-------------------------
+	SetTrap("key", _KT, Main.Enters.n);
+end
+
+-------------------------------------------------
+-- NewTextbox
+-- Builds a user textbox with default properties
+-- Returns: The new textbox
+-------------------------------------------------
+function NewTextbox ()
+	return {
+		text = "",	-- Text string
+		max = 0,	-- Max character count
+		offset = 0, cursor = 0,	-- Offset and cursor indices
+		selectIndex = 0, selectCount = 0,	-- Selection
+		bClick = true, -- Allow click
+		bDragOver = true,	-- Allow drag over
+		timeout = 300,	-- Cursor timeout
+		m = { D = "HText", HT = "HText", PE = "HText", F = "HText" },	-- Methods
+		pD = {}, pO = {}, pG = {}, pE = {}, pS = {}, pC = {},	-- Pictures
+	};
+end
+
+--------------------------
+-- DeleteTextbox
+-- Unloads a user textbox
+-- t: Index of textbox
+--------------------------
+function DeleteTextbox (t)
+	-------------------------------------------------------------------------
+	-- Remove the basic widget properties, and unload additional properties.
+	-------------------------------------------------------------------------
+	local wp = LB_GetEDatum(Main.Comp.Textbox, t);
+	UnregisterWidget(wp);
+	if wp.pS.p then Render.UnloadPicture(wp.pS.p) end;
+	if wp.pC.p then Render.UnloadPicture(wp.pC.p) end;
+end
+
+-------------------------------------
+-- SaveTextbox
+-- Saves a user textbox
+-- f: File to which textbox is saved
+-- t: Textbox properties
+-------------------------------------
+function SaveTextbox (f, t)
+	SaveMethods(f, t, true);
+	SaveInts(f, t, { "max", "offset", "cursor", "selectIndex", "selectCount", "timeout" });
+	SaveBooleans(f, t, { "bClick", "bDragOver" });
+	SaveStrings(f, t, { "text" });
+	SavePictures(f, t, { "pS", "pC" });
+	SaveWidget(f, t);
+end
+
+--------------------------------------
+-- LoadTextboxes
+-- Loads user textboxes from a data set
+-- ld: Loading data
+--------------------------------------
+function LoadTextboxes (ld)
+	--------------------------------------------------------------------------------
+	-- If the textbox list is non-empty, run through it, register a new textbox for 
+	-- each entry, and acquire the textbox for loading.
+	--------------------------------------------------------------------------------
+	if not ld.b.Textbox then return end;
+	for i, v in ipairs(ld.b.Textbox) do
+		RegisterComponent("Textbox", v.ID);
+		local d = LB_GetEDatum(Main.Comp.Textbox, i - 1);
+		---------------------------------
+		-- Load required textbox fields.
+		---------------------------------
+		d.m = v.m;
+		---------------------------------
+		-- Load optional textbox fields.
+		---------------------------------
+		if v.tag then d.tag = v.tag end;
+		if v.text then d.text = v.text end;
+		if v.max then d.max = v.max end;
+		if v.timeout then d.timeout = v.timeout end;
+		if v.offset then d.offset = v.offset end;
+		if v.cursor then d.cursor = v.cursor end;
+		if v.selectIndex then d.selectIndex = v.selectIndex end;
+		if v.selectCount then d.selectCount = v.selectCount end;
+		if v.bClick ~= nil then d.bClick = v.bClick end;
+		if v.bDragOver ~= nil then d.bDragOver = v.bDragOver end;
+		--------------------------
+		-- Load textbox pictures.
+		--------------------------
+		LoadPictures(d, v, { "pD", "pO", "pG", "pE", "pS", "pC" });
+	end
+end
+
+---------------------------
+-- CacheTextbox
+-- Copies the textbox data
+-- t: Textbox properties
+-- Returns: Textbox cache
+---------------------------
+function CacheTextbox (t)
+	local tc = {};
+	local p = { "text", "max", "offset", "cursor", "selectIndex", "selectCount", "bClick", "bDragOver", "timeout" };
+	for i, v in ipairs(p) do
+		tc[v] = t[v];
+	end
+	return tc;
+end
+
+--------------------------------
+-- RestoreTextbox
+-- Restores cached textbox data
+-- t: Textbox properties
+-- tc: Texttbox cache
+--------------------------------
+function RestoreTextbox (t, tc)
+	local p = { "text", "max", "offset", "cursor", "selectIndex", "selectCount", "bClick", "bDragOver", "timeout" };
+	for i, v in ipairs(p) do
+		t[v] = tc[v];
+	end
+end
+
+--------------------------------
+-- UpdateTextboxFeatures
+-- Updates the textbox features
+-- f: Current feature
+-- v: New value of feature
+--------------------------------
+function UpdateTextboxFeatures (f, v)
+	---------------------------------
+	-- Assign the new feature value.
+	---------------------------------
+	LB_GetSDatum(Main.Comp.Textbox)[f] = v;
+	--------------------------------------------------------------------------------
+	-- Update the textbox and get the new feature values. Indicate unsaved changes.
+	--------------------------------------------------------------------------------
+	Main.Refresh[Main.Tier - 1], Main.Refresh[Main.Tier], Main.Save = true, true, true;
+end
+
+---------------------------------------------------
+-- InstallTestTextboxes
+-- Installs test textboxes from the user textboxes
+---------------------------------------------------
+function InstallTestTextboxes ()
+	--------------------------------------------------------
+	-- Create concrete textboxes out of all user textboxes.
+	--------------------------------------------------------
+	for i, t, tb in LB_Range(Main.Comp.Textbox) do
+		-----------------------------------------------
+		-- Generate a new textbox and store its name.
+		-----------------------------------------------
+		Main.W.names[t] = PrimeTextbox();
+		---------------------------------------------------------
+		-- Assign all user-configured properties to the textbox.
+		---------------------------------------------------------
+		TB_Load(Main.W.names[t], tb);
+		MapMethods(Main.W.names[t], tb.m.D, tb.m.HT, tb.m.PE, tb.m.F);
+		Textbox.AllowSpotClick(Main.W.names[t], tb.bClick);
+		Textbox.AllowDragOver(Main.W.names[t], tb.bDragOver);
+		Textbox.SelectSubstr(Main.W.names[t], tb.selectIndex, tb.selectCount);
+	end
+end

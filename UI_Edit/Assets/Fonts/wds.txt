@@ -1,0 +1,44 @@
+WALT DISNEY SCRIPT v4.0; May 28, 2001
+Windows TrueType font, free for personal use
+Homepage: http://members.aol.com/disneyfonts/wds.html
+
+Please include this wds.txt file with any redistribution.
+
+INSTALLATION: To install any TrueType font, simply copy it to your Windows\Fonts folder.
+
+
+UPDATE 05/28/01 - Major overhaul including many new capitals, lowercase, numbers, symbols, and punctuation with improved spacing and kerning. It's practically a whole new font! 
+
+Remember to remove any prior versions from your Fonts folder before installing the update.
+
+SPACING NOTES:
+
+The lowercase "i" and "j" have presented a spacing challenge due to their extraordinarily large dots. I've spaced them so that they fit in well with other lowercase characters. The problem with this narrow spacing is that the dot may overlap a preceding capital. While this overlap has been compensated for with kerning pairs, not all applications support kerning. So, I've provided a couple of solutions for situations in which overlap is undesired but kerning is not an option.
+
+The left brace "{" will produce a dotless "i" and the right brace "}" a dotless "j." The less-than sign "<" has an optional small dot that it can be typed directly after the dotless characters to position the dot squarely on top. 
+
+Additionally, the greater-than sign ">" will produce a "micro-space" which can be used to add a tiny bit of space before an "i" or "j" or any other character.
+
+Note that not every capital requires pairing with the alternate versions -- for instance, the pair "Di" looks fine without any modification or kerning.
+
+KERNING NOTES:
+
+Some programs (like Microsoft Word) may require that you enable kerning before it will properly space kerning pairs. This is highly recommended for this font! (In MS Word: Format>Font>Character Spacing>Kerning for fonts...)
+ 
+Also, many publishing programs allow you to manually adjust the tracking and leading, so you can tweak the spacing between letters and lines to suit your specific needs. 
+
+
+THANKS TO:
+
+Robert Johnson
+
+Bill Shelly, Disneynut.com (www.disneynut.com)  
+
+Joshua Jones, Disneytrips Radio (www.disneytrips.com/radio)
+
+John Yaglenski, Intercot (www.intercot.com)
+
+ParrotHead, WDW Blues (www.wdwblues.com)
+
+
+Comments, questions, love notes, legal threats - please send them to jcmagic@yahoo.com.

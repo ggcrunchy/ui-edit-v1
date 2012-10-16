@@ -1,0 +1,202 @@
+--------------------------------------------------
+-- EditPicturesEnter
+-- Enters the edit pictures section of the editor
+--------------------------------------------------
+function EditPicturesEnter ()
+	----------------------------------------------------------------------
+	-- If we have not loaded the edit pictures section, proceed to do so.
+	----------------------------------------------------------------------
+	if not Main.S.EditPictures then
+		-----------------------------
+		-- Draws the display button.
+		-----------------------------
+		local function _D_DB (n, a, x, y, w, h)
+			---------------------------------------------------------------------
+			-- Draw the picture if the listbox choice is not the no-image entry.
+			---------------------------------------------------------------------
+			local s = LB_Selection(Main.CurT.IL);
+			if s ~= 0 then			
+				Render.DrawPicture(LB_GetEDatum(Main.CurT.IL, s), x, y, w, h);
+				----------------------------------------------------------------------
+				-- If the button is pushed, we first get the cursor coordinates, clip 
+				-- these against the button region, and record them as the end point 
+				-- of the selection rectangle. If the picture belongs to the current 
+				-- property(guaranteed if the button is pushed), draw a box where the 
+				-- selection rectangle for this property lies. 
+				----------------------------------------------------------------------
+				local d = Main.CurT.Data[LB_GetSDatum(Main.CurT.P)];
+				if Button.IsPushed(n) then
+					d.x2, d.y2 = ClipBox(Main.CursorX - x, Main.CursorY - y, 0, 0, w, h);
+				end
+				if d.pi == s then
+					DrawRect(x + d.x1, y + d.y1, x + d.x2, y + d.y2);
+				end
+			end
+			-----------------
+			-- Add a border.
+			-----------------
+			Render.DrawBox(x, y, w, h, 1, 1, 1);
+		end
+		--------------------------------------------
+		-- Processes events for the display button.
+		--------------------------------------------
+		local function _PE_DB (n, e, a)
+			----------------------------------------------------------------------------
+			-- If we just pushed the button, we set the cursor coordinates as the start
+			-- point of the selection rectangle for the current property, and indicate
+			-- that the current picture belongs to the current property. By doing this,
+			-- we are changing properties, so indicate that there are unsaved changes.
+			----------------------------------------------------------------------------
+			if e == Widget.ButtonPush then
+				local x, y, w, h = Widget.GetXYWH(n, true);
+				local cx, cy = UI.GetEventPoint();
+				local d = Main.CurT.Data[LB_GetSDatum(Main.CurT.P)];
+				d.pi, d.x1, d.y1 = LB_Selection(Main.CurT.IL), cx - x, cy - y;
+				Main.Save = true;
+			end
+		end
+		---------------------------------------
+		-- Processes events for the OK button.
+		---------------------------------------
+		local function _PE_OK ()
+			------------------------------------------------------------------------
+			-- Iterate over and assign picture properties to the current component. 
+			------------------------------------------------------------------------
+			local x, y, w, h = Widget.GetXYWH(Main.CurT.DB, true);
+			local wp = LB_GetSDatum(Main.Comp[Main.CurComp]);
+			for i, s, p in LB_Range(Main.CurT.P) do
+				local d, e = Main.CurT.Data[p], wp[p];
+				------------------------------------------------------------------------
+				-- If there is currently a picture for this property loaded, unload it.
+				------------------------------------------------------------------------
+				if e.p then Render.UnloadPicture(e.p) end;
+				---------------------------------------------------------------------
+				-- If the selection is the no-image entry, assign a null picture and 
+				-- name. Otherwise, cache the entry name and selection rectangle 
+				-- coordinates, and use them to load the picture.
+				---------------------------------------------------------------------
+				if d.pi ~= 0 then
+					local x1, y1, x2, y2 = SortPairs(d.x1, d.y1, d.x2, d.y2);
+					e.x1, e.y1, e.x2, e.y2, e.f = x1 / w, y1 / h, x2 / w, y2 / h, LB_GetEText(Main.CurT.IL, d.pi);
+					e.p = Render.LoadPicture(string.format("Assets/Textures/%s", e.f), e.x1, e.y1, e.x2, e.y2);
+				else
+					e.f, e.p = nil, nil;
+				end
+			end
+			---------------------------------------
+			-- Refresh the widget. Exit the popup.
+			---------------------------------------
+			Main.Refresh[Main.Tier - 1] = true;
+			ClosePopup();
+		end
+		------------------------------------------------
+		-- Static text for displaying selection texels.
+		------------------------------------------------
+		local function _ST (v, o, c, x, y, w, h)
+			-----------------------------------------------------------------
+			-- Closure used to display desired property and preferred value.
+			-----------------------------------------------------------------
+			local function _D_ST (n, a, x, y, w, h)
+				local s = LB_Selection(Main.CurT.IL);
+				local d = Main.CurT.Data[LB_GetSDatum(Main.CurT.P)];
+				if s ~= 0 and d.pi == s then
+					B_SetString(n, string.format("%s = %f", v, c(d[v], d[o])));
+				else
+					B_SetString(n, nil);
+				end
+				_D_Button(n, a, x, y, w, h);
+			end
+			-------------------------------------------
+			-- Setup static text as image-less button.
+			-------------------------------------------
+			local b = PrimeButton();
+			W_SetText(b, Main.T18, 0);
+			AssignMethodsRaw(b, _D_ST, nil, nil, nil);
+			Pane.AddItem(Main.CurP, b, x, y, w, h);
+		end
+		---------------------------------------------
+		-- Create and install the layer and widgets.
+		---------------------------------------------
+		SetupSectionTable("EditPictures", 0, 0, .8, .8, true);
+		SetupButton("OK", 0, .9, .3, .1, PushButton(_PE_OK));
+		SetupButton("Cancel", .3, .9, .3, .1, LeavePopupCancel);
+		SetupListbox("IL", 2, .3, .1, .65, .15, LB_SelectAndRefresh);
+		SetupListboxUpButton(.95, .1, .05, .075, Main.CurT.IL);
+		SetupListboxDownButton(.95, .175, .05, .075, Main.CurT.IL);		
+		SetupListbox("P", 2, .025, .1, .2, .15, LB_SelectNoRefresh);
+		SetupListboxUpButton(.225, .1, .05, .075, Main.CurT.P);
+		SetupListboxDownButton(.225, .175, .05, .075, Main.CurT.P);	
+		_ST("x1", "x2", math.min, .025, .35, .25, .1);
+		_ST("y1", "y2", math.min, .025, .5, .25, .1);
+		_ST("x2", "x1", math.max, .025, .65, .25, .1);
+		_ST("y2", "y1", math.max, .025, .8, .25, .1);
+		-----------------------------
+		-- Setup the display button.
+		-----------------------------
+		Main.CurT.DB = PrimeButton();
+		AssignMethodsRaw(Main.CurT.DB, _D_DB, nil, _PE_DB, nil);
+		Pane.AddItem(Main.CurP, Main.CurT.DB, .3, .35, .65, .55);
+	end
+	-------------------------------------------------
+	-- Cache the current table, and enter the popup.
+	-------------------------------------------------
+	LoadSectionTable("EditPictures");
+	---------------------------------------------------------------------------
+	-- On entry, reload the image list, and install the picture property list.
+	---------------------------------------------------------------------------
+	if Main.Enter[Main.Tier] then
+		-----------------------------------------------------------------
+		-- Clear the image list, and put in the default, no-image entry.
+		-----------------------------------------------------------------
+		for i, s, d in LB_Range(Main.CurT.IL, 1) do
+			Render.UnloadPicture(d);
+		end
+		LB_Clear(Main.CurT.IL);
+		LB_AppendEntry(Main.CurT.IL, "None", nil, true);
+		-------------------------------------------------------------------------------
+		-- Construct a new bank of picture data. Scan through the files in the texture 
+		-- folder. For each successfully created picture, add an entry to the listbox,
+		-- and record which entry it received it.
+		-------------------------------------------------------------------------------
+		Main.CurT.Data = { pics = {} };
+		for i, t in ipairs(ScanFolder("Assets/Textures")) do
+			local p = Render.LoadPicture(string.format("Assets/Textures/%s", t), 0, 0, 1, 1);
+			if p then
+				Main.CurT.Data.pics[t] = Listbox.GetItemCount(Main.CurT.IL);
+				LB_AppendEntry(Main.CurT.IL, t, p, false);
+			end
+		end
+		-------------------------------------------------------------------------------
+		-- Iterate over and load data from the current component's picture properties.
+		-- Select the picture belonging to the first property.
+		-------------------------------------------------------------------------------
+		LB_Clear(Main.CurT.P);
+		local wp, x, y, w, h = LB_GetSDatum(Main.Comp[Main.CurComp]), Widget.GetXYWH(Main.CurT.DB, true);
+		for i, v in ipairs(Main.PicProp[Main.CurComp]) do
+			-----------------------------------------------------
+			-- Copy the property into the picture property list.
+			-----------------------------------------------------
+			LB_AppendEntry(Main.CurT.P, v.s, v.p, true);
+			----------------------------------------------------------------------
+			-- If a picture belongs to the property, fit the property's selection
+			-- rectangle to the texels associated with it, and cache its picture
+			-- index. Otherwise, make its selection rectangle full size and refer
+			-- it to the no-image entry.
+			----------------------------------------------------------------------
+			local ei = Main.CurT.Data.pics[wp[v.p].f];
+			if ei then
+				Main.CurT.Data[v.p] = { pi = ei, x1 = wp[v.p].x1 * w, y1 = wp[v.p].y1 * h, x2 = wp[v.p].x2 * w, y2 = wp[v.p].y2 * h };
+			else
+				Main.CurT.Data[v.p] = { pi = 0, x1 = 0, y1 = 0, x2 = w, y2 = h };
+			end
+		end
+		LB_Select(Main.CurT.IL, Main.CurT.Data[Main.PicProp[Main.CurComp][1].p].pi);
+	end
+	-----------------------------------------------------------------------------------
+	-- On entry/refresh, check whether the no-entry image is selected. If so, disallow
+	-- selection; allow it otherwise.
+	-----------------------------------------------------------------------------------
+	if Main.Enter[Main.Tier] or Main.Refresh[Main.Tier] then
+		Button.AllowPush(Main.CurT.DB, LB_Selection(Main.CurT.IL) ~= 0);	
+	end
+end

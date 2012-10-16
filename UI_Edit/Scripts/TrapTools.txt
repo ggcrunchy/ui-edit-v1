@@ -1,0 +1,77 @@
+------------------------------------
+-- SetTrap
+-- Pushes a trap onto a trap stack
+-- s: Trap stack 
+-- tr: Trap routine
+-- lo: Level at which trap operates
+------------------------------------
+function SetTrap (s, tr, lo)
+	table.insert(Main.Traps[s], { t = tr, l = lo });
+end
+
+---------------------------------
+-- ProcessTrap
+-- Processes data through a trap
+-- Trap stack
+-- s: Trap stack
+-- b: Event buffer
+---------------------------------
+function ProcessTrap (s, b)
+	----------------------------------------------------------------------------------
+	-- Any traps operating at a level above the highest tier in the task list are now
+	-- invalid, so we trim the stack if it reaches too high.
+	----------------------------------------------------------------------------------
+	local ts = Main.Traps[s];
+	for i, v in ipairs(ts) do
+		if v.l > Main.Enters.n then
+			ts.n = i - 1;
+			break;
+		end
+	end
+	------------------------------------------------------------------------------------
+	-- If the stack is not empty, we check the top trap's operating level. If it is the
+	-- same as the highest tier in the task list, we run the trap on the event buffer.
+	------------------------------------------------------------------------------------
+	if ts.n ~= 0 and Main.Enters.n == ts[ts.n].l then
+		ts[ts.n].t(b);
+	end
+end
+
+-----------------------------------------------------------
+-- RunTraps
+-- Gets all pending events and runs them through any traps
+-----------------------------------------------------------
+function RunTraps ()
+	--------------------------------------------------------------------
+	-- Prepare empty buffers for each event group, and grab all events.
+	--------------------------------------------------------------------
+	local kb = { n = 0 };
+	while SDL.PollEvent(SDL.Event_get()) ~= 0 do
+		local t = SDL.Event_get().type;
+		---------------------------------
+		-- Check for key-related events.
+		---------------------------------
+		if t == SDL.KEYDOWN or t == SDL.KEYUP then
+			local k = SDL.Event_get().key.keysym;
+			-----------------------------------------------------------------------------
+			-- If a key was pressed, add it to the list of keys that went down this run,
+			-- and record it also in the list of pressed keys. Likewise, if a key was 
+			-- released, add it to the list of keys that went up this run, and remove it
+			-- from the list of pressed keys. 
+			-----------------------------------------------------------------------------
+			if t == SDL.KEYDOWN then
+				Main.CurD[k.sym], Main.Keys[k.sym] = true, true;
+			else
+				Main.CurU[k.sym], Main.Keys[k.sym] = true, false;
+		 	end
+		 	-------------------------
+		 	-- Buffer the key event.
+			-------------------------
+		 	table.insert(kb, k);
+		end
+	end
+	----------------------------------------
+	-- Send all buffered data to the traps.
+	----------------------------------------
+	ProcessTrap("key", kb);
+end

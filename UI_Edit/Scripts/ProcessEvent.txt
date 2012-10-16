@@ -1,0 +1,115 @@
+--------------------------------------
+-- _PE_NOP
+-- No operation process event handler
+-- n: Name used to reference widget
+-- e: Event type
+-- a: Application context
+--------------------------------------
+function _PE_NOP (n, e, a)
+end
+
+-----------------------------------------
+-- _PE_Pane
+-- Processes events for a draggable pane
+-- n: Name used to reference widget
+-- e: Event type
+-- a: Application context
+-----------------------------------------
+function _PE_Pane (n, e, a)
+	-------------------------------------------------------------------
+	-- If we catch the pane, record what part of the pane was grabbed.
+	-------------------------------------------------------------------
+	if e == Widget.PaneCatch then
+		local px, py = Widget.GetXYWH(n, true);
+		local cx, cy = UI.GetEventPoint();
+		W_GetPSet(n).g = { x = cx - px, y = cy - py };
+	end
+end
+
+------------------------------------
+-- _PE_Slider
+-- Processes events for a slider
+-- n: Name used to reference widget
+-- e: Event type
+-- a: Application context
+------------------------------------
+function _PE_Slider (n, e, a)
+	---------------------------------------------------------------------
+	-- If we catch the thumb, record what part of the thumb was grabbed.
+	---------------------------------------------------------------------
+	if e == Widget.SliderCatchThumb then
+		---------------------------------
+		-- Get the current thumb center.
+		---------------------------------
+		local p, o = W_GetPSet(n), Slider.GetOffset(n);
+		local tx = p.sx + o * (p.ex - p.sx);
+		local ty = p.sy + o * (p.ey - p.sy);
+		-------------------------------------------------------------------------------
+		-- Get the displacement from the center to the grab point, project it onto the
+		-- slider line, and record the distance of the foot from the center.
+		-------------------------------------------------------------------------------
+		local x, y, w, h = Widget.GetXYWH(n, true);
+		local lx, ly = (p.ex - p.sx) * w, (p.ey - p.sy) * h;
+		local il = 1 / (lx * lx + ly * ly);
+		local cx, cy = UI.GetEventPoint();
+		p.dO = il * ((cx - (x + tx * w)) * lx + (cy - (y + ty * h)) * ly);
+	end
+end
+
+---------------------------------------------
+-- _PE_Textbox
+-- Processes events for a selectable textbox
+-- n: Name used to reference widget
+-- e: Event type
+-- a: Application context
+---------------------------------------------
+function _PE_Textbox (n, e, a)
+	local p, s = PaneItem.GetPane(n), PaneItem.GetFocusChainSlot(n);
+	-----------------------------------------------------------------------------------
+	-- If we click on a textbox, remove any selection from it. If we grabbed a spot in
+	-- the text, place the cursor over the appropriate character; otherwise, put it at
+	-- the end of the text. If the textbox is in a focus chain, give it the focus.
+	-----------------------------------------------------------------------------------
+	if e == Widget.TextboxGrabSpot or e == Widget.WidgetGrab then
+		Textbox.RemoveSelection(n);
+		if e == Widget.TextboxGrabSpot then
+			Textbox.SetCursor(n, UI.GetEventIndex());
+		else
+			Textbox.SetCursor(n, Textbox.GetCharCount(n));
+		end
+		if s then P_SetFocus(p, s) end;
+	---------------------------------------------------------------------------------
+	-- If we drag over the text, select the drag range. If the textbox is in a focus
+	-- chain and has lost focus, we ignore this event.
+	---------------------------------------------------------------------------------
+	elseif e == Widget.TextboxDragOver then
+		if not s or s == Pane.GetFocusSlot(p) then
+			Textbox.SelectSubstr(n, UI.GetEventRange());
+		end
+	end
+end
+
+---------------------------------------------
+-- _PE_Radio
+-- Processes events for a clickable radiobox
+-- n: Name used to reference widget
+-- e: Event type
+-- a: Application context
+---------------------------------------------
+function _PE_Radio (n, e, a)
+	if e == Widget.RadioboxDropOption then
+		Radiobox.SetChoice(n, UI.GetEventIndex());
+	end
+end
+
+-----------------------------------------------------------
+-- RegisterBasicProcessEventMethods
+-- Registers all pre-defined, public process event methods
+-----------------------------------------------------------
+function RegisterBasicProcessEventMethods ()
+	RegisterProcessEventMethod("NOP", _PE_NOP, "General");
+	RegisterProcessEventMethod("Pane", _PE_Pane, "Pane");
+	RegisterProcessEventMethod("Slider", _PE_Slider, "Slider");
+	RegisterProcessEventMethod("HText", _PE_Textbox, "Textbox");
+	RegisterProcessEventMethod("Radio", _PE_Radio, "Radiobox");
+end

@@ -1,0 +1,305 @@
+--------------------------------------------------
+-- EditRadioboxEnter
+-- Enters the edit radiobox section of the editor
+--------------------------------------------------
+function EditRadioboxEnter ()
+	----------------------------------------------------------------------
+	-- If we have not loaded the edit radiobox section, proceed to do so.
+	----------------------------------------------------------------------
+	if not Main.S.EditRadiobox then
+		------------------------------------
+		-- Draws the current user radiobox.
+		------------------------------------
+		local function _D_Cur (n, a, x, y, w, h)
+			local r = LB_GetSDatum(Main.Comp.Radiobox);
+			if r then
+				RB_LoadPictures(n, r);
+				_D_Radio(n, a, x, y, w, h);
+			end
+			Render.DrawBox(x, y, w, h, 1, 1, 1);
+		end
+		-------------------------------------------
+		-- Hit test for the current user radiobox.
+		-------------------------------------------
+		local function _HT_Cur (n, cx, cy, a, x, y, w, h)
+			local r = LB_GetSDatum(Main.Comp.Radiobox);
+			if r then
+				_HT_Radio(n, cx, cy, a, x, y, w, h);
+			end
+		end
+		-------------------------------------------------
+		-- Create and install the layer and its widgets.
+		-------------------------------------------------
+		SetupSectionTable("EditRadiobox", 0, 0, 1, 1, false);
+		SetupPaneItemCore("Radiobox", "No radioboxes to delete.", nil, nil, EditRadioboxFeaturesEnter);
+		-------------------------------
+		-- Setup the radiobox display.
+		-------------------------------
+		Main.CurT.R = PrimeRadiobox();
+		AssignMethodsRaw(Main.CurT.R, _D_Cur, _HT_Cur, nil, nil);
+		Pane.AddItem(Main.CurP, Main.CurT.R, .05, .3, .65, .65);
+		----------------------------------------------------
+		-- Load radiobox-specific picture property entries.
+		----------------------------------------------------
+		table.insert(Main.PicProp["Radiobox"], { s = "B. Normal", p = "pDB" });
+		table.insert(Main.PicProp["Radiobox"], { s = "B. Entered", p = "pEB" });
+		table.insert(Main.PicProp["Radiobox"], { s = "B. Grabbed", p = "pGB" });
+		table.insert(Main.PicProp["Radiobox"], { s = "B. Outside", p = "pOB" });
+		table.insert(Main.PicProp["Radiobox"], { s = "C. Normal", p = "pDC" });
+		table.insert(Main.PicProp["Radiobox"], { s = "C. Entered", p = "pEC" });
+		table.insert(Main.PicProp["Radiobox"], { s = "C. Grabbed", p = "pGC" });
+		table.insert(Main.PicProp["Radiobox"], { s = "C. Outside", p = "pOC" });
+	end
+	----------------------
+	-- Enter the section.
+	----------------------
+	LoadSectionTable("EditRadiobox");
+	--------------------------------
+	-- On entry, load the radiobox.
+	--------------------------------
+	if Main.Enter[Main.Tier] or Main.Refresh[Main.Tier] then
+		local r = LB_GetSDatum(Main.Comp.Radiobox);
+		if r then
+			RB_Load(Main.CurT.R, r);
+		end
+	end
+end
+
+-----------------------------------------------------------
+-- EditRadioboxFeaturesEnter
+-- Enters the edit radiobox features section of the editor
+-----------------------------------------------------------
+function EditRadioboxFeaturesEnter ()
+	-------------------------------------------------------------------------------
+	-- If we have not loaded the edit radiobox features section, proceed to do so.
+	-------------------------------------------------------------------------------
+	if not Main.S.EditRadioboxFeatures then
+		-------------------------------
+		-- Draws the radiboox control.
+		-------------------------------
+		local function _D_Cur (n, a, x, y, w, h)
+			local r = LB_GetSDatum(Main.Comp.Radiobox);
+			----------------------------------------------------------------------------
+			-- If the radiobox control is pushed, fit the choice's center to the cursor 
+			-- coordinates, and correct the options so they do not go outside of the
+			-- radiobox. Refresh the radiobox.
+			----------------------------------------------------------------------------
+			if Button.IsPushed(n) then
+				local o = r.options[r.choice + 1];
+				o.x, o.y = (Main.CursorX - x) / w, (Main.CursorY - y) / h;
+				RadioboxFixOptionCoordinates(r);
+				RB_Load(Main.S.EditRadiobox.R, r);
+			end
+			---------------------------------------------------------------------------
+			-- Draw boxes for each option at their respective positions; the choice is
+			-- drawn in red.
+			---------------------------------------------------------------------------
+			for i, o in ipairs(r.options) do
+				if i - 1 == r.choice then
+					Render.DrawBox(x + (o.x - .5 * r.ow) * w, y + (o.y - .5 * r.oh) * h, r.ow * w, r.oh * h, 1, 0, 0);
+				else
+					Render.DrawBox(x + (o.x - .5 * r.ow) * w, y + (o.y - .5 * r.oh) * h, r.ow * w, r.oh * h, 1, 1, 1);
+				end
+			end
+			Render.DrawBox(x, y, w, h, 1, 1, 1);
+		end
+		----------------------------------------------
+		-- Processes events for the radiobox control.
+		----------------------------------------------
+		local function _PE_Cur (n, e, a)
+			----------------------------------------------------------------
+			-- If the radiobox control is pushed, indicate unsaved changes.
+			----------------------------------------------------------------
+			if e == Widget.ButtonPush then Main.Save = true end;
+		end
+		-------------------------------------------
+		-- Processes events for the cancel button.
+		-------------------------------------------
+		local function _PE_C ()
+			----------------------------------------------------------------------------
+			-- Restore the cached radiobox data and the save indicator. Exit the popup.
+			----------------------------------------------------------------------------
+			local r = LB_GetSDatum(Main.Comp.Radiobox);
+			RestoreRadiobox(r, Main.CurT.Data);
+			Main.Refresh[Main.Tier - 1], Main.Save = true, Main.SaveC;
+			ClosePopup();
+		end
+		------------------------------------------
+		-- Processes events for the width slider.
+		------------------------------------------
+		local function _PE_W (n, e, a)
+			--------------------------------
+			-- Process basic slider events.
+			--------------------------------
+			_PE_Slider(n, e, a);
+			-----------------------------------------------------------------------------
+			-- If the thumb is dragged or snapped, update the option width, and indicate
+			-- unsaved changes.
+			-----------------------------------------------------------------------------
+			if e == Widget.SliderDragThumb or e == Widget.SliderSnapThumb then
+				local r = LB_GetSDatum(Main.Comp.Radiobox);
+				r.ow = Slider.GetOffset(Main.CurT.W);
+				RadioboxFixOptionCoordinates(r);
+				Main.Refresh[Main.Tier - 1], Main.Save = true, true;
+			end
+		end
+		-------------------------------------------
+		-- Processes events for the height slider.
+		-------------------------------------------
+		local function _PE_H (n, e, a)
+			--------------------------------
+			-- Process basic slider events.
+			--------------------------------
+			_PE_Slider(n, e, a);
+			---------------------------------------------------------------------
+			-- If the thumb is dragged or snapped, update the option height, and 
+			-- indicate unsaved changes.
+			---------------------------------------------------------------------
+			if e == Widget.SliderDragThumb or e == Widget.SliderSnapThumb then
+				local r = LB_GetSDatum(Main.Comp.Radiobox);
+				r.oh = Slider.GetOffset(Main.CurT.H);
+				RadioboxFixOptionCoordinates(r);
+				Main.Refresh[Main.Tier - 1], Main.Save = true, true;
+			end
+		end
+		----------------------------------------------------------
+		-- Processes events for the decrease option count button.
+		----------------------------------------------------------
+		local function _PE_DOC ()
+			local r = LB_GetSDatum(Main.Comp.Radiobox);
+			if r.options.n ~= 1 then
+				---------------------------------------------------------
+				-- Remove the last option, and indicate unsaved changes.
+				---------------------------------------------------------
+				table.remove(r.options);
+				if r.choice == r.options.n then 
+					r.choice = r.choice - 1;
+				end
+				Main.Refresh[Main.Tier - 1], Main.Save = true, true;
+			end
+		end
+		----------------------------------------------------------
+		-- Processes events for the increase option count button.
+		----------------------------------------------------------
+		local function _PE_IOC ()
+			local r = LB_GetSDatum(Main.Comp.Radiobox);
+			----------------------------------------------------------
+			-- Append a default option, and indicate unsaved changes.
+			----------------------------------------------------------
+			table.insert(r.options, { x = .5 * r.ow, y = .5 * r.oh });
+			Main.Refresh[Main.Tier - 1], Main.Save = true, true;
+		end
+		----------------------------------------------------
+		-- Processes events for the decrease choice button.
+		----------------------------------------------------
+		local function _PE_DC ()
+			local r = LB_GetSDatum(Main.Comp.Radiobox);
+			if r.choice ~= 0 then
+				------------------------------------------------------
+				-- Decrease the choice, and indicate unsaved changes.
+				------------------------------------------------------
+				r.choice, Main.Refresh[Main.Tier - 1], Main.Save = r.choice - 1, true, true;
+			end
+		end
+		----------------------------------------------------
+		-- Processes events for the increase choice button.
+		----------------------------------------------------
+		local function _PE_IC ()
+			local r = LB_GetSDatum(Main.Comp.Radiobox);
+			if r.choice + 1 < r.options.n then
+				------------------------------------------------------
+				-- Increase the choice, and indicate unsaved changes.
+				------------------------------------------------------
+				r.choice, Main.Refresh[Main.Tier - 1], Main.Save = r.choice + 1, true, true;
+			end
+		end
+		--------------------------------------------
+		-- Responds to checkbox allow click toggle.
+		--------------------------------------------
+		local function _ClickT (c)
+			--------------------------------------------------------
+			-- Toggle the click flag, and indicate unsaved changes.
+			--------------------------------------------------------
+			LB_GetSDatum(Main.Comp.Radiobox).bClick, Main.Save = c, true;
+		end
+		-----------------------------------------------
+		-- Static text for displaying feature offsets.
+		-----------------------------------------------
+		local function _ST (t, f, x, y, w, h, i)
+			---------------------------------------------------
+			-- Choose either a float or integer format string.
+			---------------------------------------------------
+			local format = "%s = %f";
+			if i then format = "%s = %i" end;
+			-----------------------------------------------------------------
+			-- Closure used to display desired property and preferred value.
+			-----------------------------------------------------------------
+			local function _D_ST (n, a, x, y, w, h)
+				local p;
+				if f == "n" then
+					p = LB_GetSDatum(Main.Comp.Radiobox).options.n;
+				else
+					p = LB_GetSDatum(Main.Comp.Radiobox)[f];
+				end
+				DrawString(string.format(format, t, p), Main.T18, x, y, w, h);
+				Render.DrawBox(x, y, w, h, 1, 1, 1);
+			end
+			-------------------------------------------
+			-- Setup static text as image-less button.
+			-------------------------------------------
+			local b = PrimeButton();
+			AssignMethodsRaw(b, _D_ST, nil, nil, nil);
+			Pane.AddItem(Main.CurP, b, x, y, w, h);
+		end
+		-------------------------------------------------
+		-- Create and install the layer and its widgets.
+		-------------------------------------------------
+		SetupSectionTable("EditRadioboxFeatures", 0, 0, .6, .6, true);
+		SetupButton("OK", 0, .8, .3, .2, LeavePopup);
+		SetupButton("Cancel", .3, .8, .3, .2, PushButton(_PE_C));
+		SetupButton("-", .375, .625, .075, .075, PushButton(_PE_DOC));
+		SetupButton("+", .45, .625, .075, .075, PushButton(_PE_IOC));
+		SetupButton("-", .375, .725, .075, .075, PushButton(_PE_DC));
+		SetupButton("+", .45, .725, .075, .075, PushButton(_PE_IC));
+		SetupCheckbox("Click", .05, .4, .075, .075, ToggleCheckbox(_ClickT));
+		SetupSlider("W", .025, .15, .625, .1, .1, .5, .9, .5, .1, .9, _PE_W);
+		SetupSlider("H", .025, .25, .625, .1, .1, .5, .9, .5, .1, .9, _PE_H);
+		_ST("Width", "ow", .675, .15, .3, .1, false);
+		_ST("Height", "oh", .675, .25, .3, .1, false);
+		_ST("Option count", "n", .05, .625, .3, .075, true);
+		_ST("Choice", "choice", .05, .725, .3, .075, true);
+		-------------------------------
+		-- Setup the radiobox control.
+		-------------------------------
+		local b = PrimeButton();
+		AssignMethodsRaw(b, _D_Cur, nil, _PE_Cur, nil);
+		Pane.AddItem(Main.CurP, b, .625, .5, .35, .45);
+		------------------------------
+		-- Setup the help text links.
+		------------------------------
+		SetupHelpText(.05, .025, .925, .1, "Dimensions", "ER_Sliders");
+		SetupHelpText(.15, .4, .25, .075, "Clickable", "ER_Click", false);
+		SetupHelpText(.625, .4, .35, .075, "Options", "ER_Pos");
+		SetupHelpText(.05, .525, .5, .075, "Option count / choice", "ER_OCC");
+	end
+	--------------------
+	-- Enter the popup.
+	--------------------
+	LoadSectionTable("EditRadioboxFeatures");
+	----------------------------------------------------------
+	-- On entry, prepare the radiobox and allow for a cancel.
+	----------------------------------------------------------
+	if Main.Enter[Main.Tier] then
+		-----------------------------
+		-- Cache the radiobox state. 
+		-----------------------------
+		local r = LB_GetSDatum(Main.Comp.Radiobox);
+		Main.CurT.Data = CacheRadiobox(r);
+		-------------------------------------------------------------------
+		-- Setup the checkbox and sliders to reflect the current radiobox.
+		-------------------------------------------------------------------
+		Checkbox.Check(Main.CurT.Click, r.bClick);
+		Slider.SetOffset(Main.CurT.W, r.ow);
+		Slider.SetOffset(Main.CurT.H, r.oh);
+	end
+end

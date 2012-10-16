@@ -1,0 +1,115 @@
+--------------------------------------------------
+-- EditCheckboxEnter
+-- Enters the edit checkbox section of the editor
+--------------------------------------------------
+function EditCheckboxEnter ()
+	----------------------------------------------------------------------
+	-- If we have not loaded the edit checkbox section, proceed to do so.
+	----------------------------------------------------------------------
+	if not Main.S.EditCheckbox then
+		------------------------------------
+		-- Draws the current user checkbox.
+		------------------------------------
+		local function _D_Cur (n, a, x, y, w, h)
+			local c = LB_GetSDatum(Main.Comp.Checkbox);
+			if c then
+				if not c.bCheck then
+					W_SetPictures(n, c.pD.p, c.pO.p, c.pG.p, c.pE.p);
+				else
+					W_SetPictures(n, c.pDC.p, c.pOC.p, c.pGC.p, c.pEC.p);
+				end
+				_D_Button(n, a, x, y, w, h);
+			end
+			Render.DrawBox(x, y, w, h, 1, 1, 1);
+		end
+		-------------------------------------------------
+		-- Create and install the layer and its widgets.
+		-------------------------------------------------
+		SetupSectionTable("EditCheckbox", 0, 0, 1, 1, false);
+		SetupPaneItemCore("Checkbox", "No checkboxes to delete.", _D_Cur, nil, EditCheckboxFeaturesEnter);
+		----------------------------------------------------
+		-- Load checkbox-specific picture property entries.
+		----------------------------------------------------
+		table.insert(Main.PicProp["Checkbox"], { s = "C. Normal", p = "pDC" });
+		table.insert(Main.PicProp["Checkbox"], { s = "C. Entered", p = "pEC" });
+		table.insert(Main.PicProp["Checkbox"], { s = "C. Grabbed", p = "pGC" });
+		table.insert(Main.PicProp["Checkbox"], { s = "C. Outside", p = "pOC" });
+	end
+	----------------------
+	-- Enter the section.
+	----------------------
+	LoadSectionTable("EditCheckbox");
+end
+
+-----------------------------------------------------------
+-- EditCheckboxFeaturesEnter
+-- Enters the edit checkbox features section of the editor
+-----------------------------------------------------------
+function EditCheckboxFeaturesEnter ()
+	-------------------------------------------------------------------------------
+	-- If we have not loaded the edit checkbox features section, proceed to do so.
+	-------------------------------------------------------------------------------
+	if not Main.S.EditCheckboxFeatures then
+		-------------------------------------------
+		-- Processes events for the cancel button.
+		-------------------------------------------
+		local function _PE_C ()
+			----------------------------------------------------------------------------
+			-- Restore the cached checkbox data and the save indicator. Exit the popup.
+			----------------------------------------------------------------------------
+			local c, d = LB_GetSDatum(Main.Comp.Checkbox), Main.CurT.Data;
+			c.bClick, c.bCheck, Main.Save = d.bClick, d.bCheck, Main.SaveC;
+			ClosePopup();
+		end
+		--------------------------------------------
+		-- Responds to checkbox allow click toggle.
+		--------------------------------------------
+		local function _ClickT (c)
+			--------------------------------------------------------
+			-- Toggle the click flag, and indicate unsaved changes.
+			--------------------------------------------------------
+			LB_GetSDatum(Main.Comp.Checkbox).bClick, Main.Save = c, true;
+		end
+		--------------------------------------
+		-- Responds to checkbox check toggle.
+		--------------------------------------
+		local function _CheckT (c)
+			--------------------------------------------------------
+			-- Toggle the check flag, and indicate unsaved changes.
+			--------------------------------------------------------
+			LB_GetSDatum(Main.Comp.Checkbox).bCheck, Main.Save = c, true;
+		end
+		-------------------------------------------------
+		-- Create and install the layer and its widgets.
+		-------------------------------------------------
+		SetupSectionTable("EditCheckboxFeatures", 0, 0, .25, .25, true);
+		SetupButton("OK", 0, .7, .5, .3, LeavePopup);
+		SetupButton("Cancel", .5, .7, .5, .3, PushButton(_PE_C));
+		SetupCheckbox("Click", .05, .05, .175, .2, ToggleCheckbox(_ClickT));
+		SetupCheckbox("Check", .05, .35, .175, .2, ToggleCheckbox(_CheckT));		
+		------------------------------
+		-- Setup the help text links.
+		------------------------------
+		SetupHelpText(.3, .05, .5, .2, "Clickable", "EC_Click", false);
+		SetupHelpText(.3, .35, .5, .2, "Checked", "EC_Check", false);
+	end
+	--------------------
+	-- Enter the popup.
+	--------------------
+	LoadSectionTable("EditCheckboxFeatures");
+	----------------------------------------------------------
+	-- On entry, prepare the checkbox and allow for a cancel.
+	----------------------------------------------------------
+	if Main.Enter[Main.Tier] then
+		-----------------------------
+		-- Cache the checkbox state.
+		-----------------------------
+		local c = LB_GetSDatum(Main.Comp.Checkbox);
+		Main.CurT.Data = { bClick = c.bClick, bCheck = c.bCheck };
+		---------------------------------------------------------
+		-- Setup the checkboxes to reflect the current checkbox.
+		---------------------------------------------------------
+		Checkbox.Check(Main.CurT.Click, c.bClick);
+		Checkbox.Check(Main.CurT.Check, c.bCheck);
+	end
+end

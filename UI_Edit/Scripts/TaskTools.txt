@@ -1,0 +1,37 @@
+-----------------------------------------------
+-- AppendTask
+-- Adds a new task to the end of the task list
+-- t: Task to append
+-----------------------------------------------
+function AppendTask (t)
+	table.insert(Main.Tasks, t);
+end
+
+-------------------------------------------------
+-- PrependTask
+-- Adds a new task to the start of the task list
+-- t: Task to append
+-------------------------------------------------
+function PrependTask (t)
+	table.insert(Main.Tasks, 1, t);
+end
+
+------------------------------
+-- RunTasks
+-- Performs all pending tasks
+------------------------------
+function RunTasks ()
+	-------------------------------------------------------------------------------------
+	-- After each task, check whether the task indicated that it was done. If so, remove
+	-- it from the list. In either case, proceed to the next task until the list is run.
+	-------------------------------------------------------------------------------------
+	local i = 1;
+	while i <= Main.Tasks.n do
+		local d = Main.Tasks[i]();
+		if not d then
+			i = i + 1;
+		else
+			table.remove(Main.Tasks, i);
+		end
+	end
+end

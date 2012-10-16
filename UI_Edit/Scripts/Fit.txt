@@ -1,0 +1,152 @@
+------------------------------------
+-- _F_NOP
+-- No operation fit handler
+-- n: Name used to reference widget
+-- cx, cy: Cursor coordinates
+-- a: Application context
+-- x, y: Widget coordinates
+-- w, h: Widget dimensions
+------------------------------------
+function _F_NOP (n, cx, cy, a, x, y, w, h)
+	if Slider.IsValid(n) then
+		return Slider.GetOffset(n);
+	end
+	if Listbox.IsValid(n) then
+		return Listbox.GetHeldItem(n);
+	end
+	if Textbox.IsValid(n) then
+		return Textbox.GetHeldSpot(n);
+	end
+	if Pane.IsValid(n) then
+		return x, y;
+	end
+	return 0;
+end
+
+----------------------------------
+-- _F_Pane
+-- Pane fit handler
+-- n: Name used to reference pane
+-- cx, cy: Cursor coordinates
+-- a: Application context
+-- x, y: Pane coordinates
+-- w, h: Pane dimensions
+----------------------------------
+function _F_Pane (n, cx, cy, a, x, y, w, h)
+	-------------------------------------------------------------------------------------
+	-- If we have grabbed the pane, we position it so that the cursor is relative to its
+	-- corner exactly as it was when the pane was grabbed.
+	-------------------------------------------------------------------------------------
+	local p = W_GetPSet(n);
+	if p.g then
+		return cx - p.g.x, cy - p.g.y;
+	end
+	return x, y;
+end
+
+------------------------------------
+-- _F_Slider
+-- Slider fit handler
+-- n: Name used to reference slider
+-- cx, cy: Cursor coordinates
+-- a: Application context
+-- x, y: Slider coordinates
+-- w, h: Slider dimensions
+------------------------------------
+function _F_Slider (n, cx, cy, a, x, y, w, h)
+	local p = W_GetPSet(n);
+	-------------------------------------------------------------------------------------
+	-- Get the displacement of the cursor from the start of the slider line, and project
+	-- onto said line. The offset is how much of the distance from the line's start to 
+	-- end points the ray from start to foot covers.
+	-------------------------------------------------------------------------------------
+	local lx, ly = (p.ex - p.sx) * w, (p.ey - p.sy) * h;
+	local il = 1 / (lx * lx + ly * ly);
+	local o = il * ((cx - (x + p.sx * w)) * lx + (cy - (y + p.sy * h)) * ly);
+	------------------------------------------------------------------------------------
+	-- If we are snapping the thumb, we settle for this offset, as it aligns the cursor
+	-- and the center of the thumb. If we grabbed the thumb, however, we fix the offset
+	-- slightly, to account for off-center thumb grabs.
+	------------------------------------------------------------------------------------
+	if Slider.IsThumbCaught(n) then
+		if p.dO then o = o - p.dO end;
+	end
+	return o;
+end
+
+-------------------------------------
+-- _F_VList
+-- Vertical listbox fit handler
+-- n: Name used to reference listbox
+-- cx, cy: Cursor coordinates
+-- a: Application context
+-- x, y: Listbox coordinates
+-- w, h: Listbox dimensions
+-------------------------------------
+function _F_VList (n, cx, cy, a, x, y, w, h)
+	------------------------------------------------------------------------------------
+	-- If the cursor is above the listbox, fit the cursor to its offset. If it is below
+	-- the listbox, fit the cursor to the last item in view.
+	------------------------------------------------------------------------------------
+	local o, c = Listbox.GetOffset(n), Listbox.GetCapacity(n);
+	if cy < y then
+		return o;
+	end
+	if cy >= y + h then
+		return o + c - 1;
+	end
+	------------------------------------------------------------------------------------
+	-- As per the hit test, break the listbox up vertically, and find which section the
+	-- cursor is in--fit it to the sum of this index and the listbox's offset.
+	------------------------------------------------------------------------------------
+	return o + math.floor((cy - y) * c / h);
+end
+
+-------------------------------------
+-- _F_HText
+-- Horizontal textbox fit handler
+-- n: Name used to reference textbox
+-- cx, cy: Cursor coordinates
+-- a: Application context
+-- x, y: Textbox coordinates
+-- w, h: Textbox dimensions
+-------------------------------------
+function _F_HText (n, cx, cy, a, x, y, w, h)
+	-------------------------------------------------------------------------
+	-- If the cursor is left of the textbox, fit it to the textbox's offset.
+	-------------------------------------------------------------------------
+	local o = Textbox.GetOffset(n);
+	if cx < x then
+		return o;
+	end
+	-----------------------------------------------------------------------------------
+	-- As per the hit test, assume the character at the textbox's offset is flush with 
+	-- the left edge, and run from there and through the characters. If the cursor is
+	-- over one of those characters, fit it to that spot. If the cursor goes past the
+	-- right edge of the textbox, fit it to the last visible spot in the string.
+	-----------------------------------------------------------------------------------
+	local eW, t = x + w, W_GetText(n);
+	for i, c in TB_Range(n, o) do
+		local dW = GetTextWidth(t, c, 1, 1);
+		if (cx >= x and cx < x + dW) or x + dW > eW then
+			return i;
+		end
+		x = x + dW;
+	end
+	-----------------------------------------------------------------------------------
+	-- If the cursor is right of the end of the string, fit it to the character count.
+	-----------------------------------------------------------------------------------
+	return Textbox.GetCharCount(n);
+end
+
+-------------------------------------------------
+-- RegisterBasicFitMethods
+-- Registers all pre-defined, public fit methods
+-------------------------------------------------
+function RegisterBasicFitMethods ()
+	RegisterFitMethod("NOP", _F_NOP, "General");
+	RegisterFitMethod("Pane", _F_Pane, "Pane");
+	RegisterFitMethod("Slider", _F_Slider, "Slider");
+	RegisterFitMethod("VList", _F_VList, "Listbox");
+	RegisterFitMethod("HText", _F_HText, "Textbox");
+end

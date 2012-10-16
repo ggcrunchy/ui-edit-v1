@@ -1,0 +1,146 @@
+----------------------------------------------------
+-- PrimeCheckbox
+-- Creates and primes a checkbox and its properties
+-- Returns: Name used to reference checkbox
+----------------------------------------------------
+function PrimeCheckbox ()
+	local c = Checkbox.Create();
+	Main.WP[c] = {};
+	return c;
+end
+
+------------------------------------
+-- SetupCheckbox
+-- General checkbox setup procedure
+-- v: Table variable
+-- x, y: Checkbox coordinates
+-- w, h: Checkbox dimensions
+-- pe: Process event method
+------------------------------------
+function SetupCheckbox (v, x, y, w, h, pe)
+	local c = PrimeCheckbox();
+	W_SetProperty(c, "pD", Main.P.white);
+	W_SetProperty(c, "pDC", Main.P.C_c);
+	RegisterProcessEventMethod(pe, pe, nil);
+	MapMethods(c, "Check", nil, pe, nil);
+	Pane.AddItem(Main.CurP, c, x, y, w, h);
+	Main.CurT[v] = c;
+end
+
+----------------------------------------------------------------------
+-- ToggleCheckbox
+-- Builds a closure that calls a routine when the checkbox is toggled
+-- r: Routine to call on toggle
+-- Returns: The closure for the checkbox
+----------------------------------------------------------------------
+function ToggleCheckbox (r)
+	return function (n, e, a)
+		if e == Widget.CheckboxCheck or e == Widget.CheckboxUncheck then
+			r(e == Widget.CheckboxCheck);
+		end
+	end
+end
+
+
+--------------------------------------------------
+-- NewCheckbox
+-- Builds a user checkbox with default properties
+-- Returns: The new checkbox
+--------------------------------------------------
+function NewCheckbox ()
+	return { 
+		bClick = true,	-- Allow click
+		bCheck = false,	-- Checkbox is checked
+		m = { D = "Check", HT = "Default", PE = "NOP", F = "NOP" },	-- Methods
+		pD = {}, pO = {}, pG = {}, pE = {}, pDC = {}, pOC = {}, pGC = {}, pEC = {}	-- Pictures
+	};
+end
+
+---------------------------
+-- DeleteCheckbox
+-- Unloads a user checkbox
+-- c: Index of checkbox
+---------------------------
+function DeleteCheckbox (c)
+	------------------------------------------------------------------------
+	-- Remove the basic widget properties, followed by checkbox properties.
+	------------------------------------------------------------------------
+	local wp = LB_GetEDatum(Main.Comp.Checkbox, c);
+	UnregisterWidget(wp);
+	if wp.pDC.p then Render.UnloadPicture(wp.pDC.p) end;
+	if wp.pOC.p then Render.UnloadPicture(wp.pOC.p) end;
+	if wp.pGC.p then Render.UnloadPicture(wp.pGC.p) end;
+	if wp.pEC.p then Render.UnloadPicture(wp.pEC.p) end;	
+end
+
+--------------------------------------
+-- SaveCheckbox
+-- Saves a user checkbox
+-- f: File to which checkbox is saved
+-- c: Checkbox properties
+--------------------------------------
+function SaveCheckbox (f, c)
+	SaveMethods(f, c, false);
+	SaveBooleans(f, c, { "bClick", "bCheck" });
+	SavePictures(f, c, { "pDC", "pOC", "pGC", "pEC" });
+	SaveWidget(f, c);
+end
+
+-----------------------------------------
+-- LoadCheckboxes
+-- Loads user checkboxes from a data set
+-- ld: Loading data
+-----------------------------------------
+function LoadCheckboxes (ld)
+	----------------------------------------------------------------------------------
+	-- If the checkbox list is non-empty, run through it, register a new checkbox for 
+	-- each entry, and acquire the checkbox for loading.
+	----------------------------------------------------------------------------------
+	if not ld.b.Checkbox then return end;
+	for i, v in ipairs(ld.b.Checkbox) do
+		RegisterComponent("Checkbox", v.ID);
+		local d = LB_GetEDatum(Main.Comp.Checkbox, i - 1);
+		----------------------------------
+		-- Load required checkbox fields.
+		----------------------------------
+		d.m = v.m;
+		----------------------------------
+		-- Load optional checkbox fields.
+		----------------------------------
+		if v.tag then d.tag = v.tag end;
+		if v.bClick ~= nil then d.bClick = v.bClick end;
+		if v.bCheck ~= nil then d.bCheck = v.bCheck end;
+		---------------------------
+		-- Load checkbox pictures.
+		---------------------------
+		LoadPictures(d, v, { "pD", "pO", "pG", "pE", "pDC", "pOC", "pGC", "pEC" });
+	end
+end
+
+-----------------------------------------------------
+-- InstallTestCheckboxes
+-- Installs test checkboxes from the user checkboxes
+-----------------------------------------------------
+function InstallTestCheckboxes ()
+	----------------------------------------------------------
+	-- Create concrete checkboxes out of all user checkboxes.
+	----------------------------------------------------------
+	for i, t, c in LB_Range(Main.Comp.Checkbox) do
+		-----------------------------------------------
+		-- Generate a new checkbox and store its name.
+		-----------------------------------------------
+		Main.W.names[t] = PrimeCheckbox();
+		----------------------------------------------------------
+		-- Assign all user-configured properties to the checkbox.
+		----------------------------------------------------------
+		W_SetPictures(Main.W.names[t], c.pD.p, c.pO.p, c.pG.p, c.pE.p);
+		W_SetProperty(Main.W.names[t], "pDC", c.pDC.p);
+		W_SetProperty(Main.W.names[t], "pOC", c.pOC.p);
+		W_SetProperty(Main.W.names[t], "pGC", c.pGC.p);
+		W_SetProperty(Main.W.names[t], "pEC", c.pEC.p);
+		MapMethods(Main.W.names[t], c.m.D, c.m.HT, c.m.PE, c.m.F);
+		Checkbox.AllowClick(Main.W.names[t], c.bClick);
+		Checkbox.Check(Main.W.names[t], c.bCheck);
+		Widget.SetTag(Main.W.names[t], c.tag);
+	end
+end

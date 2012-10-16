@@ -1,0 +1,129 @@
+<nButton>3</nButton>
+<Button>
+	<ID>"Button1"</ID>
+	<m>
+		<D>"Button"</D>
+		<HT>"Default"</HT>
+		<PE>"NOP"</PE>
+	</m>
+	<bPush>true</bPush>
+	<string>""</string>
+	<tag>""</tag>
+</Button>
+<Button>
+	<ID>"Button2"</ID>
+	<m>
+		<D>"Button"</D>
+		<HT>"Default"</HT>
+		<PE>"NOP"</PE>
+	</m>
+	<bPush>true</bPush>
+	<string>""</string>
+	<tag>""</tag>
+</Button>
+<Button>
+	<ID>"Button3"</ID>
+	<m>
+		<D>"Button"</D>
+		<HT>"Default"</HT>
+		<PE>"NOP"</PE>
+	</m>
+	<bPush>true</bPush>
+	<string>""</string>
+	<tag>""</tag>
+</Button>
+<nSlider>1</nSlider>
+<Slider>
+	<ID>"Slider1"</ID>
+	<m>
+		<D>"Slider"</D>
+		<HT>"Slider"</HT>
+		<PE>"Slider"</PE>
+		<F>"Slider"</F>
+	</m>
+	<sx>0.319940</sx>
+	<sy>0.160714</sy>
+	<ex>0.714286</ex>
+	<ey>0.815476</ey>
+	<tw>0.203082</tw>
+	<th>0.100000</th>
+	<bSnap>true</bSnap>
+	<bDrag>true</bDrag>
+	<tag>""</tag>
+</Slider>
+<nListbox>0</nListbox>
+<nTextbox>0</nTextbox>
+<nCheckbox>0</nCheckbox>
+<nRadiobox>0</nRadiobox>
+<nPane>2</nPane>
+<Pane>
+	<ID>"Pane1"</ID>
+	<nItem>2</nItem>
+	<PI>
+		<ID>"Button2"</ID>
+		<x>0.000000</x>
+		<y>0.000000</y>
+		<w>1.000000</w>
+		<h>1.000000</h>
+	</PI>
+	<PI>
+		<ID>"Button1"</ID>
+		<x>0.000000</x>
+		<y>0.000000</y>
+		<w>1.000000</w>
+		<h>1.000000</h>
+	</PI>
+	<nFocus>2</nFocus>
+	<focus>"Button1"</focus>
+	<focus>"Button2"</focus>
+	<m>
+		<D>"Default"</D>
+		<HT>"Default"</HT>
+		<PE>"NOP"</PE>
+		<F>"NOP"</F>
+	</m>
+	<bDrag>true</bDrag>
+	<bBackOnDelete>false</bBackOnDelete>
+	<tag>""</tag>
+</Pane>
+<Pane>
+	<ID>"Pane2"</ID>
+	<nItem>1</nItem>
+	<PI>
+		<ID>"Button3"</ID>
+		<x>0.000000</x>
+		<y>0.000000</y>
+		<w>1.000000</w>
+		<h>1.000000</h>
+	</PI>
+	<nFocus>0</nFocus>
+	<m>
+		<D>"Default"</D>
+		<HT>"Default"</HT>
+		<PE>"NOP"</PE>
+		<F>"NOP"</F>
+	</m>
+	<bDrag>true</bDrag>
+	<bBackOnDelete>false</bBackOnDelete>
+	<tag>""</tag>
+</Pane>
+<nLayer>2</nLayer>
+<Layer>
+	<ID>"Layer1"</ID>
+	<nPane>1</nPane>
+	<LP>
+		<ID>"Pane2"</ID>
+		<x>0.00000</x>
+		<y>0.00000</y>
+		<w>1.00000</w>
+		<h>1.00000</h>
+	</LP>
+	<tag>""</tag>
+</Layer>
+<Layer>
+	<ID>"Layer2"</ID>
+	<nPane>0</nPane>
+	<tag>""</tag>
+</Layer>
+<nFrame>1</nFrame>
+<layer>"Layer2"</layer>

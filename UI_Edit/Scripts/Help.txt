@@ -1,0 +1,883 @@
+---------------------------------------
+-- Text for EditFrame free layer list.
+---------------------------------------
+Main.Help.EF_FreeLayers = {
+	"The list of layers that can be added",
+	"to the frame."
+};
+
+---------------------------------------
+-- Text for EditFrame used layer list.
+---------------------------------------
+Main.Help.EF_UsedLayers = {
+	"The list of layers that have been",
+	"added to the frame."
+};
+
+-------------------------------------------------
+-- Text for EditFrame insert and remove buttons.
+-------------------------------------------------
+Main.Help.EF_IR = {
+	"Buttons used to manage the frame's",
+	"layers. 'Insert' adds the current",
+	"selection in the free layer list to",
+	"the frame, after the selection in the",
+	"used layer list. 'Remove' removes the",
+	"current selection in the used layer",
+	"list from the frame."
+};
+
+---------------------------------------------
+-- Text for EditFrame current frame display.
+---------------------------------------------
+Main.Help.EF_Cur = {
+	"Visualization of the frame. It gives an",
+	"idea how panes in the layers added to it",
+	"will appear, with the layers drawn from",
+	"back to front. Panes in the currently",
+	"selected used layer are framed in blue.",
+	"Note that pane items are not displayed."
+};
+
+----------------------------------
+-- Text for EditLayer layer list.
+----------------------------------
+Main.Help.EPL_Layers = {
+	"The list of layers you have created.",
+	"The selected layer is the one you are",
+	"currently editing."
+};
+
+--------------------------------------
+-- Text for EditLayer free pane list.
+--------------------------------------
+Main.Help.EPL_FreePanes = {
+	"The list of panes that can be added",
+	"to this layer."
+};
+
+--------------------------------------
+-- Text for EditLayer used pane list.
+--------------------------------------
+Main.Help.EPL_UsedPanes = {
+	"The list of panes that have been",
+	"added to this layer."
+};
+
+----------------------------------------------
+-- Text for EditLayer new and delete buttons.
+----------------------------------------------
+Main.Help.EPL_ND = {
+	"Buttons used to manage layers. 'New'",
+	"creates a new layer with default",
+	"properties. 'Delete' deletes the",
+	"currently selected layer."
+};
+
+----------------------------------------------
+-- Text for EditLayer add and remove buttons.
+----------------------------------------------
+Main.Help.EPL_AR = {
+	"Buttons used to manage this layer's",
+	"panes. 'Add' adds the current selection",
+	"in the free pane list to this layer.",
+	"'Remove' removes the current selection",
+	"in the used pane list from this layer."
+};
+
+-----------------------------------------
+-- Text for EditLayer tag and ID button.
+-----------------------------------------
+Main.Help.EPL_TagID = {
+	"This button opens a popup that lets you",
+	"set this layer's tag and the ID used to",
+	"identify it in the editor."
+};
+
+---------------------------------------------
+-- Text for EditLayer current layer display.
+---------------------------------------------
+Main.Help.EPL_Cur = {
+	"Visualization of the layer. It gives an",
+	"idea how panes added to it will appear.",
+	"The current selection in the used pane",
+	"list, which is framed in red, can be",
+	"placed by clicking and dragging out the",
+	"box on the layer you want it to occupy.",
+	"Note that pane items are not displayed."
+};
+
+--------------------------------
+-- Text for EditPane pane list.
+--------------------------------
+Main.Help.EP_Pane = {
+	"The list of panes you have created.",
+	"The selected pane is the one you are",
+	"currently editing."
+};
+
+--------------------------------------
+-- Text for EditPane pictures button.
+--------------------------------------
+Main.Help.EP_Pictures = {
+	"This button opens a popup that lets you",
+	"configure this pane's pictures. These",
+	"pictures represent these pane states:",
+	"normal, entered, grabbed, and grabbed",
+	"but not entered."
+};
+
+---------------------------------------
+-- Text for EditPane property buttons.
+---------------------------------------
+Main.Help.EP_Prop = {
+	"These buttons open popups that let you",
+	"configure common properties for this",
+	"pane. 'Methods' lets you choose general-",
+	"and pane-type methods to set its behavior.",
+	"'Tag / ID' lets you set its tag and the ID",
+	"used to identify the pane in the editor."
+};
+
+--------------------------------------
+-- Text for EditPane features button.
+--------------------------------------
+Main.Help.EP_Features = {
+	"This button opens a popup that lets you",
+	"edit pane-specific features."
+};
+
+-------------------------------------
+-- Text for EditPane used item list.
+-------------------------------------
+Main.Help.EP_UsedItems = {
+	"The list of items that have been",
+	"added to this pane."
+};
+
+-------------------------------------
+-- Text for EditPane free item list.
+-------------------------------------
+Main.Help.EP_FreeItems = {
+	"The list of items that can be added",
+	"to this pane."
+};
+
+---------------------------------------------
+-- Text for EditPane new and delete buttons.
+---------------------------------------------
+Main.Help.EP_ND = {
+	"Buttons used to manage panes. 'New'",
+	"creates a new pane with default",
+	"properties. 'Delete' deletes the",
+	"currently selected pane."
+};
+
+---------------------------------------------
+-- Text for EditPane add and remove buttons.
+---------------------------------------------
+Main.Help.EP_AR = {
+	"Buttons used to manage this pane's",
+	"items. 'Add' adds the current selection",
+	"in the free item list to this pane.",
+	"'Remove' removes the current selection",
+	"in the used item list from this pane."
+};
+
+-------------------------------------------
+-- Text for EditPane current pane display.
+-------------------------------------------
+Main.Help.EP_Cur = {
+	"Visualization of the pane. It uses the",
+	"picture appropriate to its state--whether",
+	"the cursor has entered it and whether it",
+	"has been grabbed. It also gives an idea",
+	"how items added to it will appear. The",
+	"current selection in the used item list,",
+	"which is framed in red, can be placed by",
+	"clicking and dragging out the box on the",
+	"pane you want it to occupy."
+};
+
+-----------------------------------------------
+-- Text for EditPaneFeatures focus chain list.
+-----------------------------------------------
+Main.Help.EP_FC = {
+	"An ordered list of the items in this",
+	"pane's focus chain."
+};
+
+--------------------------------------------------
+-- Text for EditPaneFeatures non-focus item list.
+--------------------------------------------------
+Main.Help.EP_NFItems = {
+	"A list of items that may be added",
+	"to the focus chain."
+};
+
+-----------------------------------------------------------------
+-- Text for EditPaneFeatures add and remove focus items buttons.
+-----------------------------------------------------------------
+Main.Help.EP_FAR = {
+	"Buttons used to manage the pane's",
+	"focus chain. 'Add' adds the current",
+	"selection in the free item list to",
+	"the focus chain, after the selection",
+	"in the focus chain list. 'Remove'",
+	"removes the current selection in the",
+	"focus chain list."
+};
+
+--------------------------------------------
+-- Text for EditPaneFeatures drag checkbox.
+--------------------------------------------
+Main.Help.EP_Drag = {
+	"If checked, this pane",
+	"is draggable."
+};
+
+------------------------------------------------------
+-- Text for EditPaneFeatures back on delete checkbox.
+------------------------------------------------------
+Main.Help.EP_BOD = {
+	"If checked, this pane's",
+	"focus will migrate to the",
+	"previous entry if the",
+	"focus item is deleted."
+};
+
+------------------------------------
+-- Text for EditButton button list.
+------------------------------------
+Main.Help.EB_Button = {
+	"The list of buttons you have created.",
+	"The selected button is the one you are",
+	"currently editing."
+};
+
+----------------------------------------
+-- Text for EditButton pictures button.
+----------------------------------------
+Main.Help.EB_Pictures = {
+	"This button opens a popup that lets you",
+	"configure this button's pictures. These",
+	"pictures represent these button states:",
+	"normal, entered, grabbed, and grabbed",
+	"but not entered."
+};
+
+-----------------------------------------
+-- Text for EditButton property buttons.
+-----------------------------------------
+Main.Help.EB_Prop = {
+	"These buttons open popups that let you",
+	"configure common properties for this",
+	"button. 'Methods' lets you choose general-",
+	"and button-type methods to set its behavior.",
+	"'Tag / ID' lets you set its tag and the ID",
+	"used to identify the button in the editor."
+};
+
+----------------------------------------
+-- Text for EditButton features button.
+----------------------------------------
+Main.Help.EB_Features = {
+	"This button opens a popup that lets you",
+	"edit button-specific features."
+};
+
+-----------------------------------------------
+-- Text for EditButton new and delete buttons.
+-----------------------------------------------
+Main.Help.EB_ND = {
+	"Buttons used to manage buttons.",
+	"'New' creates a new button with",
+	"default properties. 'Delete'",
+	"deletes the currently selected",
+	"button."
+};
+
+-----------------------------------------------
+-- Text for EditButton current button display.
+-----------------------------------------------
+Main.Help.EB_Cur = {
+	"Visualization of the button. It uses the",
+	"picture appropriate to its state--whether",
+	"the cursor has entered it and whether it",
+	"has been grabbed."
+};
+
+----------------------------------------------
+-- Text for EditButtonFeatures push checkbox.
+----------------------------------------------
+Main.Help.EB_Push = {
+	"If checked, this button",
+	"is pushable."
+};
+
+---------------------------------------------
+-- Text for EditButtonFeatures text textbox.
+---------------------------------------------
+Main.Help.EB_Text = {
+	"Text to display in the button."
+};
+
+------------------------------------
+-- Text for EditSlider slider list.
+------------------------------------
+Main.Help.ES_Slider = {
+	"The list of sliders you have created.",
+	"The selected slider is the one you are",
+	"currently editing."
+};
+
+----------------------------------------
+-- Text for EditSlider pictures button.
+----------------------------------------
+Main.Help.ES_Pictures = {
+	"This button opens a popup that lets you",
+	"configure this slider's pictures. These",
+	"pictures represent these slider states:",
+	"normal, entered, grabbed, and grabbed",
+	"but not entered. There are also variants",
+	"of each used by the slider's thumb."
+};
+
+-----------------------------------------
+-- Text for EditSlider property buttons.
+-----------------------------------------
+Main.Help.ES_Prop = {
+	"These buttons open popups that let you",
+	"configure common properties for this",
+	"slider. 'Methods' lets you choose general-",
+	"and slider-type methods to set its behavior.",
+	"'Tag / ID' lets you set its tag and the ID",
+	"used to identify the slider in the editor."
+};
+
+----------------------------------------
+-- Text for EditSlider features button.
+----------------------------------------
+Main.Help.ES_Features = {
+	"This button opens a popup that lets you",
+	"edit slider-specific features."
+};
+
+-----------------------------------------------
+-- Text for EditSlider new and delete buttons.
+-----------------------------------------------
+Main.Help.ES_ND = {
+	"Buttons used to manage sliders.",
+	"'New' creates a new slider with",
+	"default properties. 'Delete'",
+	"deletes the currently selected",
+	"slider."
+};
+
+-----------------------------------------------
+-- Text for EditSlider current slider display.
+-----------------------------------------------
+Main.Help.ES_Cur = {
+	"Visualization of the slider. It uses the picture",
+	"appropriate to its state--whether the cursor has",
+	"entered it and whether it has been grabbed;",
+	"likewise for the thumb."
+};
+
+----------------------------------------
+-- Text for EditButtonFeatures sliders.
+----------------------------------------
+Main.Help.ES_Sliders = {
+	"These sliders allow you to set this",
+	"slider's offset, and the width and",
+	"height of its thumb. Their values,",
+	"from 0 to 1 inclusive, are shown in",
+	"the boxes on their right. The offset",
+	"indicates how far the thumb is between",
+	"its start and end positions. The width",
+	"and height indicate how much of the",
+	"slider's area the thumb occupies."
+};
+
+----------------------------------------------
+-- Text for EditSliderFeatures snap checkbox.
+----------------------------------------------
+Main.Help.ES_Snap = {
+	"If clicked, this slider",
+	"is snappable."
+};
+
+----------------------------------------------
+-- Text for EditSliderFeatures drag checkbox.
+----------------------------------------------
+Main.Help.ES_Drag = {
+	"If clicked, this slider's",
+	"thumb is draggable."
+};
+
+----------------------------------------------
+-- Text for EditSliderFeatures thumb control.
+----------------------------------------------
+Main.Help.ES_Pos = {
+	"This control lets you set the start and",
+	"end position for this slider's thumb. To",
+	"do so, click and drag a line from start",
+	"to end inside the box, as you wish the",
+	"thumb to be placed within the slider body.",
+	"A green box is shown at the start, a blue",
+	"box at the end, a white box where the",
+	"thumb is given the current offset, and a",
+	"red line is drawn between start and end."
+};
+
+--------------------------------------
+-- Text for EditListbox listbox list.
+--------------------------------------
+Main.Help.EL_Listbox = {
+	"The list of listboxes you have created.",
+	"The selected listbox is the one you are",
+	"currently editing."
+};
+
+-----------------------------------------
+-- Text for EditListbox pictures button.
+-----------------------------------------
+Main.Help.EL_Pictures = {
+	"This button opens a popup that lets you",
+	"configure this listbox's pictures. These",
+	"pictures represent these listbox states:",
+	"normal, entered, grabbed, and grabbed",
+	"but not entered. There are also variants",
+	"of each used by the listbox's items, both",
+	"when selected and when not selected."
+};
+
+------------------------------------------
+-- Text for EditListbox property buttons.
+------------------------------------------
+Main.Help.EL_Prop = {
+	"These buttons open popups that let you",
+	"configure common properties for this",
+	"listbox. 'Methods' lets you choose general-",
+	"and listbox-type methods to set its behavior.",
+	"'Tag / ID' lets you set its tag and the ID",
+	"used to identify the listbox in the editor."
+};
+
+-----------------------------------------
+-- Text for EditListbox features button.
+-----------------------------------------
+Main.Help.EL_Features = {
+	"This button opens a popup that lets you",
+	"edit listbox-specific features."
+};
+
+------------------------------------------------
+-- Text for EditListbox new and delete buttons.
+------------------------------------------------
+Main.Help.EL_ND = {
+	"Buttons used to manage listboxes.",
+	"'New' creates a new listbox with",
+	"default properties. 'Delete'",
+	"deletes the currently selected",
+	"listbox."
+};
+
+-------------------------------------------------
+-- Text for EditListbox current listbox display.
+-------------------------------------------------
+Main.Help.EL_Cur = {
+	"Visualization of the listbox. It uses the",
+	"picture appropriate to its state--whether",
+	"the cursor has entered it and whether it",
+	"has been grabbed; likewise for each item."
+};
+
+-----------------------------------------------
+-- Text for EditListboxFeatures items listbox.
+-----------------------------------------------
+Main.Help.EL_Items = {
+	"Ordered list of this listbox's items. The",
+	"selected item is the current item."
+};
+
+-------------------------------------------------------------
+-- Text for EditListboxFeatures new and delete item buttons.
+-------------------------------------------------------------
+Main.Help.EL_ItemND = {
+	"Buttons used to manage this listbox's",
+	"items. 'New' adds a new item into the",
+	"item list after the current selection.",
+	"'Delete' removes the current selection",
+	"from the item list."
+};
+
+----------------------------------------------------------------------
+-- Text for EditListboxFeatures capacity and offset buttons and text.
+----------------------------------------------------------------------
+Main.Help.EL_CO = {
+	"These buttons let you set this listbox's",
+	"capacity and offset."
+};
+
+------------------------------------------------
+-- Text for EditListboxFeatures click checkbox.
+------------------------------------------------
+Main.Help.EL_Click = {
+	"If clicked, this listbox's",
+	"items are clickable."
+};
+
+----------------------------------------------------
+-- Text for EditListboxFeatures drag over checkbox.
+----------------------------------------------------
+Main.Help.EL_DragOver = {
+	"If clicked, this listbox",
+	"can be dragged over while",
+	"an item is clicked."
+};
+
+---------------------------------------------------
+-- Text for EditListboxFeatures item text textbox.
+---------------------------------------------------
+Main.Help.EL_ItemText = {
+	"Text to display in the current item."
+};
+
+---------------------------------------------------------
+-- Text for EditListboxFeatures item context and button.
+---------------------------------------------------------
+Main.Help.EL_ItemContext = {
+	"To assign a context to the current item, type a",
+	"32-bit number into this textbox and hit 'Set'."
+};
+
+------------------------------------------------------
+-- Text for EditListboxFeatures item select checkbox.
+------------------------------------------------------
+Main.Help.EL_Select = {
+	"If checked, the current item is selected."
+};
+
+--------------------------------------
+-- Text for EditTextbox textbox list.
+--------------------------------------
+Main.Help.ET_Textbox = {
+	"The list of textboxes you have created.",
+	"The selected textbox is the one you are",
+	"currently editing."
+};
+
+-----------------------------------------
+-- Text for EditTextbox pictures button.
+-----------------------------------------
+Main.Help.ET_Pictures = {
+	"This button opens a popup that lets you",
+	"configure this textbox's pictures. These",
+	"pictures represent these textbox states:",
+	"normal, entered, grabbed, and grabbed",
+	"but not entered. There are also pictures",
+	"for the selection highlight and the",
+	"cursor."
+};
+
+------------------------------------------
+-- Text for EditTextbox property buttons.
+------------------------------------------
+Main.Help.ET_Prop = {
+	"These buttons open popups that let you",
+	"configure common properties for this",
+	"textbox. 'Methods' lets you choose general-",
+	"and textbox-type methods to set its behavior.",
+	"'Tag / ID' lets you set its tag and the ID",
+	"used to identify the textbox in the editor."
+};
+
+-----------------------------------------
+-- Text for EditTextbox features button.
+-----------------------------------------
+Main.Help.ET_Features = {
+	"This button opens a popup that lets you",
+	"edit textbox-specific features."
+};
+
+------------------------------------------------
+-- Text for EditTextbox new and delete buttons.
+------------------------------------------------
+Main.Help.ET_ND = {
+	"Buttons used to manage textboxes.",
+	"'New' creates a new textbox with",
+	"default properties. 'Delete'",
+	"deletes the currently selected",
+	"textbox."
+};
+
+-------------------------------------------------
+-- Text for EditTextbox current textbox display.
+-------------------------------------------------
+Main.Help.ET_Cur = {
+	"Visualization of the textbox. It uses the",
+	"picture appropriate to its state--whether",
+	"the cursor has entered it and whether it",
+	"has been grabbed. If there is a selection",
+	"it displays the selection highlight; if",
+	"not, it displays the cursor."
+};
+
+----------------------------------------------
+-- Text for EditTextboxFeatures text textbox.
+----------------------------------------------
+Main.Help.ET_Text = {
+	"Text to display in the textbox."
+};
+
+------------------------------------------------------------
+-- Text for EditTextboxFeatures timeout textbox and button.
+------------------------------------------------------------
+Main.Help.ET_TO = {
+	"To assign a timeout to the textbox, type a",
+	"32-bit number into this textbox and hit 'Set'.",
+	"To stop the cursor from blinking, assign a",
+	"timeout of 0."
+};
+
+------------------------------------------------
+-- Text for EditTextboxFeatures click checkbox.
+------------------------------------------------
+Main.Help.ET_Click = {
+	"If checked, this textbox",
+	"can be clicked."
+};
+
+----------------------------------------------------
+-- Text for EditTextboxFeatures drag over checkbox.
+----------------------------------------------------
+Main.Help.ET_DragOver = {
+	"If checked, this textbox",
+	"can be dragged over."
+};
+
+----------------------------------------
+-- Text for EditCheckbox checkbox list.
+----------------------------------------
+Main.Help.EC_Checkbox = {
+	"The list of checkboxes you have created.",
+	"The selected checkbox is the one you are",
+	"currently editing."
+};
+
+----------------------------------------------------------------------
+-- Text for EditTextboxFeatures max character count buttons and text.
+----------------------------------------------------------------------
+Main.Help.ET_Max = {
+	"These buttons let you set this textbox's",
+	"max character count."
+};
+
+---------------------------------------------------------
+-- Text for EditTextboxFeatures offset buttons and text.
+---------------------------------------------------------
+Main.Help.ET_O = {
+	"These buttons let you set this",
+	"textbox's offset."
+};
+
+---------------------------------------------------------
+-- Text for EditTextboxFeatures cursor buttons and text.
+---------------------------------------------------------
+Main.Help.ET_C = {
+	"These buttons let you set this",
+	"textbox's cursor."
+};
+
+------------------------------------------------------------------
+-- Text for EditTextboxFeatures selection start buttons and text.
+------------------------------------------------------------------
+Main.Help.ET_SS = {
+	"These buttons let you set the start position,",
+	"if any, of this textbox's selection."
+};
+
+------------------------------------------------------------------
+-- Text for EditTextboxFeatures selection count buttons and text.
+------------------------------------------------------------------
+Main.Help.ET_SC = {
+	"These buttons let you set this textbox's",
+	"count of selected characters."
+};
+
+------------------------------------------
+-- Text for EditCheckbox pictures button.
+------------------------------------------
+Main.Help.EC_Pictures = {
+	"This button opens a popup that lets you",
+	"configure this checkbox's pictures. These",
+	"pictures represent these checkbox states:",
+	"normal, entered, grabbed, and grabbed",
+	"but not entered. There are also variants",
+	"of each used when the checkbox is checked."
+};
+
+-------------------------------------------
+-- Text for EditCheckbox property buttons.
+-------------------------------------------
+Main.Help.EC_Prop = {
+	"These buttons open popups that let you",
+	"configure common properties for this",
+	"checkbox. 'Methods' lets you choose general-",
+	"and checkbox-type methods to set its behavior.",
+	"'Tag / ID' lets you set its tag and the ID",
+	"used to identify the checkbox in the editor."
+};
+
+-------------------------------------------
+-- Text for EditChecktbox features button.
+-------------------------------------------
+Main.Help.EC_Features = {
+	"This button opens a popup that lets you",
+	"edit checkbox-specific features."
+};
+
+-------------------------------------------------
+-- Text for EditCheckbox new and delete buttons.
+-------------------------------------------------
+Main.Help.EC_ND = {
+	"Buttons used to manage checkboxes.",
+	"'New' creates a new checkbox with",
+	"default properties. 'Delete'",
+	"deletes the currently selected",
+	"checkbox."
+};
+
+---------------------------------------------------
+-- Text for EditCheckbox current checkbox display.
+---------------------------------------------------
+Main.Help.EC_Cur = {
+	"Visualization of the checkbox. It uses the",
+	"picture appropriate to its state--whether",
+	"the cursor has entered it and whether it",
+	"has been grabbed, as well as whether it is",
+	"checked."
+};
+
+-------------------------------------------------
+-- Text for EditCheckboxFeatures click checkbox.
+-------------------------------------------------
+Main.Help.EC_Click = {
+	"If checked, this checkbox",
+	"is clickable."
+};
+
+-------------------------------------------------
+-- Text for EditCheckboxFeatures check checkbox.
+-------------------------------------------------
+Main.Help.EC_Check = {
+	"If checked, this checkbox",
+	"is checked."
+};
+
+----------------------------------------
+-- Text for EditRadiobox radiobox list.
+----------------------------------------
+Main.Help.ER_Radiobox = {
+	"The list of radioboxes you have created.",
+	"The selected radiobox is the one you are",
+	"currently editing."
+};
+
+------------------------------------------
+-- Text for EditRadiobox pictures button.
+------------------------------------------
+Main.Help.ER_Pictures = {
+	"This button opens a popup that lets you",
+	"configure this radiobox's pictures. These",
+	"pictures represent these radiobox states:",
+	"normal, entered, grabbed, and grabbed",
+	"but not entered. There are also variants",
+	"of each used by the radio buttons, both",
+	"for normal and choice options."
+};
+
+-------------------------------------------
+-- Text for EditRadiobox property buttons.
+-------------------------------------------
+Main.Help.ER_Prop = {
+	"These buttons open popups that let you",
+	"configure common properties for this",
+	"radiobox. 'Methods' lets you choose general-",
+	"and radiobox-type methods to set its behavior.",
+	"'Tag / ID' lets you set its tag and the ID",
+	"used to identify the radiobox in the editor."
+};
+
+------------------------------------------
+-- Text for EditRadiobox features button.
+------------------------------------------
+Main.Help.ER_Features = {
+	"This button opens a popup that lets you",
+	"edit radiobox-specific features."
+};
+
+-------------------------------------------------
+-- Text for EditRadiobox new and delete buttons.
+-------------------------------------------------
+Main.Help.ER_ND = {
+	"Buttons used to manage radioboxes.",
+	"'New' creates a new radiobox with",
+	"default properties. 'Delete'",
+	"deletes the currently selected",
+	"radiobox."
+};
+
+---------------------------------------------------
+-- Text for EditRadiobox current radiobox display.
+---------------------------------------------------
+Main.Help.ER_Cur = {
+	"Visualization of the radiobox. It uses the",
+	"picture appropriate to its state--whether",
+	"the cursor has entered it and whether it",
+	"has been grabbed; likewise for the options."
+};
+
+------------------------------------------
+-- Text for EditRadioboxFeatures sliders.
+------------------------------------------
+Main.Help.ER_Sliders = {
+	"These sliders allow you to set this",
+	"radiobox's option width and height.",
+	"Their values, from 0 to 1 inclusive,",
+	"are shown in the boxes on their right.",
+	"The width and height indicate how much",
+	"radiobox's area an option occupies."
+};
+
+-------------------------------------------------
+-- Text for EditRadioboxFeatures click checkbox.
+-------------------------------------------------
+Main.Help.ER_Click = {
+	"If checked, this radiobox's",
+	"options can be clicked."
+};
+
+--------------------------------------------------
+-- Text for EditRadioboxFeatures options control.
+--------------------------------------------------
+Main.Help.ER_Pos = {
+	"This control lets you set the positions",
+	"of the radiobox options. To do so, click",
+	"and drag to a position inside the box, as",
+	"you wish the option to be placed within the",
+	"radiobox body. This will place the current",
+	"choice. A white box is shown for each",
+	"regular option, and a red box is shown for",
+	"the choice."
+};
+
+---------------------------------------------------------------------------
+-- Text for EditRadioboxFeatures option count and choice buttons and text.
+---------------------------------------------------------------------------
+Main.Help.ER_OCC = {
+	"These buttons let you set the number of options",
+	"used by the radiobox, and then to decide which",
+	"one to set as the choice."
+};

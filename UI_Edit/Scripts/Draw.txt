@@ -1,0 +1,314 @@
+------------------------------------
+-- _D_WidgetBox
+-- Used to render a box
+-- n: Name used to reference widget
+-- a: Application context
+-- x, y: Widget coordinates
+-- w, h: Widget dimensions
+------------------------------------
+function _D_WidgetBox (n, a, x, y, w, h)
+	Render.DrawBox(x, y, w, h, 1, 1, 1);
+end
+
+----------------------------------
+-- _D_Pane
+-- Used to render a pane
+-- n: Name used to reference pane
+-- a: Application context
+-- x, y: Pane coordinates
+-- w, h: Pane dimensions
+----------------------------------
+function _D_Pane (n, a, x, y, w, h)
+	DrawWidget(n, x, y, w, h);
+	Render.DrawBox(x, y, w, h, 1, 1, 1);
+end
+
+------------------------------------
+-- _D_Button
+-- Used to render a button
+-- n: Name used to reference button
+-- a: Application context
+-- x, y: Button coordinates
+-- w, h: Button dimensions
+------------------------------------
+function _D_Button (n, a, x, y, w, h)
+	--------------------------------
+	-- Draw the common widget part.
+	--------------------------------
+	DrawWidget(n, x, y, w, h);
+	-------------------------------------------
+	-- Draw any string loaded into the button.
+	-------------------------------------------
+	_D_Static(n, a, x, y, w, h);
+end
+
+------------------------------------
+-- _D_Static
+-- Used to render static text
+-- n: Name used to reference button
+-- a: Application context
+-- x, y: Button coordinates
+-- w, h: Button dimensions
+------------------------------------
+function _D_Static (n, a, x, y, w, h)
+	-----------------------------------------------------------------------------------
+	-- If there is a string associated with the button, draw it at the desired offset,
+	-- centered vertically.
+	-----------------------------------------------------------------------------------
+	local s = B_GetString(n);
+	if s then
+		local t, f = W_GetText(n);
+		local cW, cH = Render.GetTextSize(t.font, s);
+		local vW, vH = Render.GetVideoSize();
+		DrawString(s, t, x + f * w, y + .5 * (h - cH / vH), w, h);
+	end
+end
+
+------------------------------------
+-- _D_Slider
+-- Used to render a slider
+-- n: Name used to reference slider
+-- a: Application context
+-- x, y: Slider coordinates
+-- w, h: Slider dimensions
+------------------------------------
+function _D_Slider (n, a, x, y, w, h)
+	------------------------
+	-- Draw the background.
+	------------------------
+	DrawWidget(n, x, y, w, h);
+	-------------------------------------------------------------------
+	-- Get the global thumb position and dimensions, given its offset.
+	-------------------------------------------------------------------
+	local p, o = W_GetPSet(n), Slider.GetOffset(n);
+	local tx = p.sx + o * (p.ex - p.sx) - .5 * p.tw;
+	local ty = p.sy + o * (p.ey - p.sy) - .5 * p.th;
+	------------------------------------------------------------
+	-- Draw the thumb, using its pictures and grab/enter tests.
+	------------------------------------------------------------
+	W_ExchangePictures(n, "pDT", "pOT", "pGT", "pET");
+	DrawWidgetMember(n, x + tx * w, y + ty * h, p.tw * w, p.th * h, Slider.IsThumbGrabbed, Slider.IsThumbEntered);
+	W_ExchangePictures(n, "pDT", "pOT", "pGT", "pET");
+end
+
+-------------------------------------
+-- _D_VList
+-- Used to render a vertical listbox
+-- n: Name used to reference listbox
+-- a: Application context
+-- x, y: Listbox coordinates
+-- w, h: Listbox dimensions
+-------------------------------------
+function _D_VList (n, a, x, y, w, h)
+	------------------------
+	-- Draw the background.
+	------------------------
+	DrawWidget(n, x, y, w, h);
+	--------------------------------------------------------------------------
+	-- Provide a closure to test whether the current item is held or entered.
+	--------------------------------------------------------------------------
+	local ih, ii = Listbox.GetHeldItem(n), Listbox.GetInItem(n);
+	local function _IT (p, i)
+		return function (n)
+			return i == p;
+		end
+	end
+	--------------------------------------
+	-- Cache the general widget pictures.
+	--------------------------------------
+	local p = W_GetPSet(n);
+	local pD, pO, pG, pE = p.pD, p.pO, p.pG, p.pE;
+	-------------------------------------------------------------------------------------
+	-- Iterate through the visible items. For each item, use the proper set of pictures,
+	-- based on whether or not the item is selected. The picture we use is determined on
+	-- the basis of whether the item is grabbed and whether it is entered. We draw the
+	-- item, and then move down to the next line.
+	-------------------------------------------------------------------------------------
+	local y2, h2, t, f = y, h / Listbox.GetCapacity(n), W_GetText(n);
+	for i, s, d in LB_View(n) do
+		if Listbox.IsItemSelected(n, i) then
+			p.pD, p.pO, p.pG, p.pE = p.pDS, p.pOS, p.pGS, p.pES;
+		else
+			p.pD, p.pO, p.pG, p.pE = p.pDI, p.pOI, p.pGI, p.pEI;
+		end
+		DrawWidgetMember(n, x, y2, w, h2, _IT(ih, i), _IT(ii, i));
+		if s then
+			DrawString(s, t, x + f * w, y2, w, h2);
+		end
+		y2 = y2 + h2;
+	end
+	---------------------------------------------------------------
+	-- Restore the general widget pictures, and frame the listbox.
+	---------------------------------------------------------------
+	p.pD, p.pO, p.pG, p.pE = pD, pO, pG, pE;
+	Render.DrawBox(x, y, w, h, 1, 1, 1);
+end
+
+---------------------------------------
+-- _D_HText
+-- Used to render a horizontal textbox
+-- n: Name used to reference textbox
+-- a: Application context
+-- x, y: Textbox coordinates
+-- w, h: Textbox dimensions
+---------------------------------------
+function _D_HText (n, a, x, y, w, h)
+	------------------------
+	-- Draw the background.
+	------------------------
+	DrawWidget(n, x, y, w, h);
+	---------------------------------------------------
+	-- If the string is not empty, proceed to draw it.
+	---------------------------------------------------
+	local o, c, t = Textbox.GetOffset(n), Textbox.GetCursor(n), W_GetText(n);
+	local s, nC = Textbox.GetSubstr(n, o, Textbox.GetCharCount(n));
+	if nC and nC ~= 0 then
+		----------------------------------------------------------
+		-- Find out if there is a selection following the offset.
+		----------------------------------------------------------
+		local sc = Textbox.GetSelectCount(n);	
+		if sc ~= 0 then
+			local b = Textbox.GetSelectStart(n);
+			if b + sc > o then
+				-------------------------------------------------------------------------
+				-- If the selection begins after the offset, find out the width of the 
+				-- text leading up to it, and move ahead by that much. Otherwise, reduce 
+				-- the selected character count to account for those before the offset.
+				-------------------------------------------------------------------------
+				local xS, e = x, 0;
+				if b > o then
+					e = b - o;
+					xS = xS + GetTextWidth(t, s, 1, e);
+				else
+					sc = sc + b - o;
+				end
+				------------------------------------------------------------------------
+				-- If the selection begins within the visible region, then find out the 
+				-- width of the selected text(clipping if needed), and draw a box.
+				------------------------------------------------------------------------
+				if xS < x + w then
+					local wS = GetTextWidth(t, s, e + 1, e + sc);
+					if xS + wS > x + w then wS = x + w - xS end;
+					DrawWidgetPicture(n, "pS", xS, y, wS, h);
+				end
+			end
+		end
+		-------------------------------------------
+		-- Draw the visible portion of the string.
+		-------------------------------------------
+		DrawString(s, t, x, y, w, h);
+	end
+	-------------------------------------------------------------------
+	-- Draw the cursor if it is not blinked and there is no selection.
+	-------------------------------------------------------------------
+	if not TB_IsBlinked(n) and c >= o then
+		local d = c - o;
+		local xC, wC = x + GetTextWidth(t, s, 1, d);
+		if xC < x + w and Textbox.GetSelectCount(n) == 0 then
+			if c ~= Textbox.GetCharCount(n) then
+				wC = GetTextWidth(t, s, d + 1, d + 1);
+			else
+				wC = GetTextWidth(t, " ", 1, 1);
+			end
+			if xC + wC > x + w then wC = x + w - xC end;
+			DrawWidgetPicture(n, "pC", xC, y, wC, h);
+		end
+	end
+	----------------------
+	-- Frame the textbox.
+	----------------------
+	Render.DrawBox(x, y, w, h, 1, 1, 1);
+end
+
+--------------------------------------
+-- _D_Check
+-- Used to render a checkbox
+-- n: Name used to reference checkbox
+-- a: Application context
+-- x, y: Checkbox coordinates
+-- w, h: Checkbox dimensions
+--------------------------------------
+function _D_Check (n, a, x, y, w, h)
+	----------------------------------------------------------------------------------
+	-- If the checkbox is checked, swap the check pictures with the general pictures.
+	-- Draw the checkbox as if it were a general widget. Swap the pictures back again
+	-- afterward, if it is checked.
+	----------------------------------------------------------------------------------
+	local c = Checkbox.IsChecked(n);
+	if c then
+		W_ExchangePictures(n, "pDC", "pOC", "pGC", "pEC");
+	end
+	DrawWidget(n, x, y, w, h);
+	if c then
+		W_ExchangePictures(n, "pDC", "pOC", "pGC", "pEC");
+	end
+	-----------------------
+	-- Frame the checkbox.
+	-----------------------
+	Render.DrawBox(x, y, w, h, 1, 1, 1);
+end
+
+--------------------------------------
+-- _D_Radio
+-- Used to render a radiobox
+-- n: Name used to reference radiobox
+-- a: Application context
+-- x, y: Radiobox coordinates
+-- w, h: Radiobox dimensions
+--------------------------------------
+function _D_Radio (n, a, x, y, w, h)
+	------------------------
+	-- Draw the background.
+	------------------------
+	DrawWidget(n, x, y, w, h);
+	----------------------------------------------------------------------------
+	-- Provide a closure to test whether the current option is held or entered.
+	----------------------------------------------------------------------------
+	local oh, oi = Radiobox.GetHeldOption(n), Radiobox.GetInOption(n);
+	local function _OT (p, i)
+		return function (n)
+			return i == p;
+		end
+	end
+	--------------------------------------
+	-- Cache the general widget pictures.
+	--------------------------------------
+	local p = W_GetPSet(n);
+	local pD, pO, pG, pE = p.pD, p.pO, p.pG, p.pE;
+	---------------------------------------------------------------------------------
+	-- Iterate through the options. For each option, use the proper set of pictures,
+	-- based on whether or not the option is the choice. The picture we use is 
+	-- determined on the basis of whether the option is grabbed and whether it is 
+	-- entered. We draw the option, and then move down to the next one.
+	---------------------------------------------------------------------------------
+	local c = Radiobox.GetChoice(n);
+	for i, o in RB_Range(n) do
+		if i == c then
+			p.pD, p.pO, p.pG, p.pE = p.pDC, p.pOC, p.pGC, p.pEC;
+		else
+			p.pD, p.pO, p.pG, p.pE = p.pDB, p.pOB, p.pGB, p.pEB;
+		end
+		DrawWidgetMember(n, x + (o.x - .5 * p.ow) * w, y + (o.y - .5 * p.oh) * h, p.ow * w, p.oh * h, _OT(oh, i), _OT(oi, i));
+	end
+	----------------------------------------------------------------
+	-- Restore the general widget pictures, and frame the radiobox.
+	----------------------------------------------------------------
+	p.pD, p.pO, p.pG, p.pE = pD, pO, pG, pE;
+	Render.DrawBox(x, y, w, h, 1, 1, 1);
+end
+
+------------------------------------------
+-- RegisterBasicDrawMethods
+-- Registers all pre-defined draw methods
+------------------------------------------
+function RegisterBasicDrawMethods ()
+	RegisterDrawMethod("Default", _D_WidgetBox, "General");
+	RegisterDrawMethod("Pane", _D_Pane, "Pane");
+	RegisterDrawMethod("Button", _D_Button, "Button");
+	RegisterDrawMethod("Static", _D_Static, "Button");
+	RegisterDrawMethod("Slider", _D_Slider, "Slider");
+	RegisterDrawMethod("VList", _D_VList, "Listbox");
+	RegisterDrawMethod("HText", _D_HText, "Textbox");
+	RegisterDrawMethod("Check", _D_Check, "Checkbox");
+	RegisterDrawMethod("Radio", _D_Radio, "Radiobox");
+end

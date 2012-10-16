@@ -1,0 +1,159 @@
+----------------------------------------------
+-- MessageBoxEnter
+-- Enters the message box popup of the editor
+----------------------------------------------
+function MessageBoxEnter ()
+	------------------------------------------------------------------
+	-- If we have not loaded the message box popup, proceed to do so.
+	------------------------------------------------------------------
+	if not Main.S.MessageBox then
+		-------------------------------------------------
+		-- Create and install the layer and its widgets.
+		-------------------------------------------------
+		SetupSectionTable("MessageBox", 0, 0, .6, .3, true);
+		SetupButton("OK", .3, .5, .4, .4, LeavePopup);
+		-----------------------------
+		-- Setup the message button.
+		-----------------------------
+		Main.CurT.M = PrimeButton();
+		W_SetText(Main.CurT.M, Main.T24, 0);
+		MapMethods(Main.CurT.M, "Button", nil, nil, nil);
+		Pane.AddItem(Main.CurP, Main.CurT.M, .1, .1, .8, .4);
+	end
+	--------------------
+	-- Enter the popup.
+	--------------------
+	LoadSectionTable("MessageBox");
+	--------------------------------------
+	-- On entry, load the message string.
+	--------------------------------------
+	if Main.Enter[Main.Tier] then
+		B_SetString(Main.CurT.M, Main.Msg);
+	end
+end
+
+--------------------------------------------
+-- OKCancelEnter
+-- Enters the OK/Cancel popup of the editor
+--------------------------------------------
+function OKCancelEnter ()
+	----------------------------------------------------------------
+	-- If we have not loaded the OK/Cancel popup, proceed to do so.
+	----------------------------------------------------------------
+	if not Main.S.OKCancel then
+		------------------------------
+		-- Function to process an OK.
+		------------------------------
+		local function _PE_OK ()
+			Main.Cond[Main.CurCond] = "Do";
+			ClosePopup();
+		end
+		---------------------------------
+		-- Function to process a Cancel.
+		---------------------------------
+		local function _PE_C ()
+			Main.Cond[Main.CurCond] = "Stop";
+			ClosePopup();
+		end
+		-------------------------------------------------
+		-- Create and install the layer and its widgets.
+		-------------------------------------------------
+		SetupSectionTable("OKCancel", 0, 0, .6, .3, true);
+		SetupButton("OK", .1, .5, .4, .4, PushButton(_PE_OK));
+		SetupButton("Cancel", .5, .5, .4, .4, PushButton(_PE_C));
+		-----------------------------
+		-- Setup the message button.
+		-----------------------------
+		Main.CurT.M = PrimeButton();
+		W_SetText(Main.CurT.M, Main.T24, 0);
+		MapMethods(Main.CurT.M, "Button", nil, nil, nil);
+		Pane.AddItem(Main.CurP, Main.CurT.M, .1, .1, .8, .4);
+	end
+	--------------------
+	-- Enter the popup.
+	--------------------
+	LoadSectionTable("OKCancel");
+	--------------------------------------
+	-- On entry, load the message string.
+	--------------------------------------
+	if Main.Enter[Main.Tier] then
+		B_SetString(Main.CurT.M, Main.Msg);
+	end
+end
+
+--------------------------------------------
+-- HelpEnter
+-- Enters the help popup of the editor
+--------------------------------------------
+function HelpEnter ()
+	-----------------------------------------------------------
+	-- If we have not loaded the help popup, proceed to do so.
+	-----------------------------------------------------------
+	if not Main.S.Help then
+		----------------------------------
+		-- Draws the help message button.
+		----------------------------------
+		local function _D_M (n, a, x, y, w, h)
+			local t, f = W_GetText(n);
+			h = h / table.getn(Main.Help[Main.Msg]);
+			for i, v in ipairs(Main.Help[Main.Msg]) do
+				DrawString(v, t, x + f, y, w, h)
+				y = y + h;
+			end
+		end
+		----------------------
+		-- Install the layer.
+		----------------------
+		Main.S.Help = { PL = PaneLayer.Create() };
+		Main.CurT = Main.S.Help;
+		------------------------
+		-- Setup the help pane.
+		------------------------
+		Main.CurT.Pane = PrimePane();
+		W_SetProperty(Main.CurT.Pane, "pD", Main.P.black);
+		MapMethods(Main.CurT.Pane, "Pane", nil, "Pane", "Pane");
+		-----------------------------
+		-- Setup the message button.
+		-----------------------------
+		Main.CurT.M = PrimeButton();
+		W_SetText(Main.CurT.M, Main.T24, .05);
+		AssignMethodsRaw(Main.CurT.M, _D_M, nil, nil, nil);
+		------------------------
+		-- Setup the OK button.
+		------------------------
+		Main.CurT.OK = PrimeButton();
+		W_SetPictures(Main.CurT.OK, Main.P.B_n, Main.P.B_o, Main.P.B_g, Main.P.B_e);
+		W_SetText(Main.CurT.OK, Main.T24, .25);
+		B_SetString(Main.CurT.OK, "OK");
+		RegisterProcessEventMethod(LeavePopup, LeavePopup, nil);
+		MapMethods(Main.CurT.OK, "Button", nil, LeavePopup, nil);		
+	end
+	--------------------
+	-- Enter the popup.
+	--------------------
+	LoadSectionTable("Help");
+	------------------------------------
+	-- On entry, build the help dialog.
+	------------------------------------
+	if Main.Enter[Main.Tier] then
+		-----------------------------------------------
+		-- Find the width of the longest line of text.
+		-----------------------------------------------
+		local mw, t, f = 0, W_GetText(Main.CurT.M);
+		for i, v in ipairs(Main.Help[Main.Msg]) do
+			local lw = GetTextWidth(t, v, 1, string.len(v));
+			if lw > mw then mw = lw end;
+		end
+		--------------------------------------------------------------------------------
+		-- If necessary, widen the width so that it accomodates the OK button. We use a
+		-- constant height for each line of text, as well as constant dimensions for
+		-- the OK button--we size the pane to reflect these fixed sizes.
+		--------------------------------------------------------------------------------
+		local c, w = table.getn(Main.Help[Main.Msg]), mw + f + .1;
+		if w < .3 then w = .3 end;
+		local iw, ih = .1 / w, 1 / (c + 1);
+		PaneLayer.AddPane(Main.CurT.PL, Main.CurT.Pane, 0, 0, w, (c + 1) * .1);
+		Pane.AddItem(Main.CurT.Pane, Main.CurT.M, 0, 0, 1, c * ih);
+		Pane.AddItem(Main.CurT.Pane, Main.CurT.OK, 0, c * ih, 3 * iw, ih);
+	end
+end

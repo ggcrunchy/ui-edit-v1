@@ -1,0 +1,88 @@
+--------------------------------------------------
+-- EditTagAndIDEnter
+-- Enters the edit tag and ID popup of the editor
+--------------------------------------------------
+function EditTagAndIDEnter ()
+	----------------------------------------------------------------------
+	-- If we have not loaded the edit tag and ID popup, proceed to do so.
+	----------------------------------------------------------------------
+	if not Main.S.EditTagAndID then
+		---------------------------------------
+		-- Processes events for the OK button.
+		---------------------------------------
+		local function _PE_OK ()
+			----------------------------------------
+			-- Task to change component tag and ID.
+			----------------------------------------
+			local function _T_ChangeTagAndID ()
+				---------------------------------------------------------------------
+				-- If allowed to quit, do so and discard this task. If told to wait,
+				-- keep the task around. Otherwise, get rid of the task.
+				---------------------------------------------------------------------
+				if Main.Cond["TID"] == "Do" then
+					-------------------------------------------
+					-- Assign the tag and ID to the component.
+					-------------------------------------------
+					local c = LB_GetSText(Main.Comp[Main.CurComp]);
+					ChangeComponentTag(Main.CurComp, c, TB_GetString(Main.CurT.T));
+					ChangeComponentID(Main.CurComp, c, TB_GetString(Main.CurT.ID));
+					----------------------------------------------------------------------
+					-- Indicate that we have produced changes that need saving, and exit.
+					----------------------------------------------------------------------
+					Main.Save = true;
+					ClosePopup();						
+				elseif Main.Cond["TID"] == "Wait" then
+					return false;
+				end
+				return true;
+			end
+			-----------------------------------------------------------------------------
+			-- Make sure we are using a unique tag. Install the change component tag and 
+			-- ID task. If we have a tag clash, prompt the user with an OK/Cancel popup.
+			-----------------------------------------------------------------------------
+			local ni = TB_GetString(Main.CurT.ID);
+			if ni == "" then
+				MessageBox("Please provide an ID.");
+			elseif LB_GetSText(Main.Comp[Main.CurComp]) ~= ni and IsComponentIDUsed(Main.CurComp, ni) then
+				MessageBox("ID already in use by similar component.");
+			else
+				Main.Cond["TID"] = "Do";
+				PrependTask(_T_ChangeTagAndID);
+				local nt = TB_GetString(Main.CurT.T);
+				if LB_GetSDatum(Main.Comp[Main.CurComp]).tag ~= nt and IsComponentTagUsed(Main.CurComp, nt) then
+					OKCancel("Tag belongs to similar component. Continue?", "TID");
+				end
+			end	
+		end
+		-------------------------------------------------
+		-- Create and install the layer and its widgets.
+		-------------------------------------------------
+		SetupSectionTable("EditTagAndID", 0, 0, .4, .3, true);
+		SetupTextbox("T", 16, "", .05, .05, .9, .3, true);
+		SetupTextbox("ID", 16, "", .05, .4, .9, .3, true);
+		SetupButton("OK", 0, .7, .5, .3, PushButton(_PE_OK));
+		SetupButton("Cancel", .5, .7, .5, .3, LeavePopupCancel);
+		--------------------------
+		-- Setup the focus chain.
+		--------------------------
+		Pane.LoadFocusChain(Main.CurP, Main.CurT.T, Main.CurT.ID, false);
+	end
+	--------------------
+	-- Enter the popup.
+	--------------------
+	LoadSectionTable("EditTagAndID");
+	-------------------------------------------------------------
+	-- On entry, prepare the focus chain and load the textboxes.
+	-------------------------------------------------------------
+	if Main.Enter[Main.Tier] then
+		-----------------------------------------------------------
+		-- Install the textbox trap for the edit tag and ID chain.
+		-----------------------------------------------------------
+		TextboxChainPrime(PaneItem.GetPane(Main.CurT.T));
+		-----------------------------------------------------------
+		-- Load the tag and ID belonging to the current component.
+		-----------------------------------------------------------
+		TB_SetString(Main.CurT.T, LB_GetSDatum(Main.Comp[Main.CurComp]).tag, true);
+		TB_SetString(Main.CurT.ID, LB_GetSText(Main.Comp[Main.CurComp]), true);
+	end
+end

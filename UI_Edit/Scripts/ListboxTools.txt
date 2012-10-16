@@ -1,0 +1,524 @@
+---------------------------------------------------
+-- PrimeListbox
+-- Creates and primes a listbox and its properties
+-- Returns: Name used to reference listbox
+---------------------------------------------------
+function PrimeListbox ()
+	local l = Listbox.Create();
+	Main.WP[l] = { a = {} };
+	return l;
+end
+
+-----------------------------------
+-- SetupListbox
+-- General listbox setup procedure
+-- v: Table variable
+-- c: Capacity
+-- x, y: Listbox coordinates
+-- w, h: Listbox dimensions
+-- pe: Process event method
+-----------------------------------
+function SetupListbox (v, c, x, y, w, h, pe)
+	local l = PrimeListbox();
+	InstallListbox(l, c, x, y, w, h, pe);
+	Main.CurT[v] = l;
+end
+
+-----------------------------------
+-- InstallListbox
+-- Install an instantiated listbox
+-- l: Listbox to install
+-- c: Capacity
+-- x, y: Listbox coordinates
+-- w, h: Listbox dimensions
+-- pe: Process event method
+-----------------------------------
+function InstallListbox (l, c, x, y, w, h, pe)
+	Listbox.SetCapacity(l, c);
+	W_SetProperty(l, "pD", Main.P.black);
+	W_SetProperty(l, "pDI", Main.P.black);
+	W_SetProperty(l, "pDS", Main.P.blue);
+	W_SetText(l, Main.T18, 0);
+	RegisterProcessEventMethod(pe, pe, nil);
+	MapMethods(l, "VList", "VList", pe, nil);
+	Pane.AddItem(Main.CurP, l, x, y, w, h);
+end
+
+--------------------------------------------
+-- LB_GetEntry
+-- Gets a given listbox entry's members
+-- l: Name used to reference listbox
+-- e: Index of entry
+-- Returns: The text and datum in the entry
+--------------------------------------------
+function LB_GetEntry (l, e)
+	return LB_GetEText(l, e), LB_GetEDatum(l, e);
+end
+
+-------------------------------------------
+-- LB_GetEText
+-- Gets the text for a given listbox entry
+-- l: Name used to reference listbox
+-- e: Index of entry
+-- Returns: The text in the entry
+-------------------------------------------
+function LB_GetEText (l, e)
+	return Main.WP[l].a[e].et;
+end
+
+----------------------------------------------------
+-- LB_GetEDatum
+-- Gets the datum attached to a given listbox entry
+-- l: Name used to reference listbox
+-- e: Index of entry
+-- Returns: The datum attached to the entry
+----------------------------------------------------
+function LB_GetEDatum (l, e)
+	return Main.WP[l].a[e].ed;
+end
+
+-------------------------------------------
+-- LB_SetEText
+-- Sets the text for a given listbox entry
+-- l: Name used to reference listbox
+-- e: Index of entry
+-- t: Text to assign
+-------------------------------------------
+function LB_SetEText (l, e, t)
+	Main.WP[l].a[e].et = t;
+end
+
+-----------------------------------------------------------------------------
+-- LB_Selection
+-- Gets the selected item from a listbox(assumes only one selection allowed)
+-- l: Name used to reference listbox
+-- Returns: Index of the selection
+-----------------------------------------------------------------------------
+function LB_Selection (l)
+	return Main.WP[l].s;
+end
+
+---------------------------------------------------------------------------------
+-- LB_GetSelection
+-- Gets the members of a listbox's selection(assumes only one selection allowed)
+-- l: Name used to reference listbox
+-- Returns: The text and datum in the selection
+---------------------------------------------------------------------------------
+function LB_GetSelection (l)
+	local s = LB_Selection(l);
+	if s then
+		return LB_GetEntry(l, s);
+	end
+end
+
+-----------------------------------------------------------------------------------------
+-- LB_GetSText
+-- Gets the text of the selected item from a listbox(assumes only one selection allowed)
+-- l: Name used to reference listbox
+-- Returns: Text of the selection
+-----------------------------------------------------------------------------------------
+function LB_GetSText (l)
+	local s = LB_Selection(l);
+	if s then
+		return LB_GetEText(l, s);
+	end
+	return nil;
+end
+
+------------------------------------------------------------------------------------------
+-- LB_GetSDatum
+-- Gets the datum of the selected item from a listbox(assumes only one selection allowed)
+-- l: Name used to reference listbox
+-- Returns: Datum of the selection
+------------------------------------------------------------------------------------------
+function LB_GetSDatum (l)
+	local s = LB_Selection(l);
+	if s then
+		return LB_GetEDatum(l, s);
+	end
+	return nil;
+end
+
+--------------------------------------------------------------
+-- LB_Select
+-- Selects a listbox item(assumes only one selection allowed)
+-- l: Name used to reference listbox
+-- i: Item to select
+--------------------------------------------------------------
+function LB_Select (l, i)
+	local s = LB_Selection(l);
+	if s then 
+		Listbox.SelectItem(l, s, false);
+	end
+	if i and i >= 0 and i < Listbox.GetItemCount(l) then
+		Listbox.SelectItem(l, i, true);
+		Main.WP[l].s = i;
+	else
+		Main.WP[l].s = nil;
+	end
+end
+
+-------------------------------------------------------------------
+-- LB_AddEntry
+-- Adds a listbox entry and updates the listbox
+-- l: Name used to reference listbox
+-- e: Index of entry
+-- t: Text to assign
+-- d: Datum to attach to entry
+-- sf: Indicates whether to select if this becomes the first entry
+-------------------------------------------------------------------
+function LB_AddEntry (l, e, t, d, sf)
+	-----------------------------------------------------------
+	-- Add the item corresponding to the entry to the listbox.
+	-----------------------------------------------------------
+	Listbox.AddItem(l, e);
+	------------------------------------------------------------------------------------
+	-- Move entries after the addition one spot ahead. Put the entry in the freed spot.
+	------------------------------------------------------------------------------------
+	local a, i = Main.WP[l].a, Listbox.GetItemCount(l) - 1;
+	if sf and i == 0 then LB_Select(l, 0) end;
+	while i > e do
+		a[i], i = a[i - 1], i - 1;
+	end
+	a[e] = { et = t, ed = d };
+end
+
+-------------------------------------------------------------------
+-- LB_AppendEntry
+-- Adds an entry to the end of the listbox and updates the listbox
+-- l: Name used to reference listbox
+-- t: Text to assign
+-- d: Datum to attach to entry
+-- sf: Indicates whether to select if this becomes the first entry
+-------------------------------------------------------------------
+function LB_AppendEntry (l, t, d, sf)
+	LB_AddEntry(l, Listbox.GetItemCount(l), t, d, sf);
+end
+
+---------------------------------------------------------
+-- LB_RemoveEntry
+-- Removes a listbox entry and updates the listbox
+-- l: Name used to reference listbox
+-- e: Entry to remove
+---------------------------------------------------------
+function LB_RemoveEntry (l, e)
+	-----------------------------------------------------------------------------------
+	-- If we are deleting an item before the selection, or deleting the selection when
+	-- it is at the end, move the selection back. Clear the current selection.
+	-----------------------------------------------------------------------------------
+	local c, s = Listbox.GetItemCount(l), LB_Selection(l);
+	if e < s or (e == s and s + 1 == c) then s = s - 1 end;
+	LB_Select(l, nil);
+	----------------------------------------------------------------
+	-- Remove the item corresponding to the entry from the listbox.
+	----------------------------------------------------------------
+	Listbox.RemoveItem(l, e);
+	-----------------------------------------------------------------------------
+	-- Move entries after the removal one spot back; the last entry becomes nil.
+	-----------------------------------------------------------------------------
+	local a = Main.WP[l].a;
+	for i = e, c - 1 do
+		a[i] = a[i + 1];
+	end
+	--------------------------------------------------------
+	-- Make a new selection, using the new selection index.
+	--------------------------------------------------------
+	LB_Select(l, s);
+end
+
+-------------------------------------
+-- LB_Clear
+-- Empties a listbox
+-- l: Name used to reference listbox
+-------------------------------------
+function LB_Clear (l)
+	------------------------------------
+	-- Remove all items in the listbox.
+	------------------------------------
+	Listbox.RemoveItemRange(l, 0, Listbox.GetItemCount(l));
+	-------------------------
+	-- Clear the item array.
+	-------------------------
+	Main.WP[l].a, Main.WP[l].s = {}, nil;
+end
+
+------------------------------------------------------------
+-- LB_SelectAndRefresh
+-- Selects a listbox item, and orders a refresh on a change
+-- e: Event to process
+-- a: Application context
+------------------------------------------------------------
+function LB_SelectAndRefresh (n, e, a)
+	if e == Widget.ListboxDropItem then
+		local s, c = UI.GetEventRange();
+		------------------------------------------------------
+		-- Ignore the dropped item if it is already selected.
+		------------------------------------------------------
+		if not Listbox.IsItemSelected(n, s) then
+			----------------------------
+			-- Select the dropped item.
+			----------------------------
+			LB_Select(n, s);
+			--------------------
+			-- Order a refresh.
+			--------------------
+			Main.Refresh[Main.Enters.n] = true;
+		end
+	end
+end
+
+-----------------------------------------------------
+-- LB_SelectNoRefresh
+-- Selects a listbox item without ordering a refresh
+-- e: Event to process
+-- a: Application context
+-----------------------------------------------------
+function LB_SelectNoRefresh (n, e, a)
+	if e == Widget.ListboxDropItem then
+		local s, c = UI.GetEventRange();
+		------------------------------------------------------
+		-- Ignore the dropped item if it is already selected.
+		------------------------------------------------------
+		if not Listbox.IsItemSelected(n, s) then
+			LB_Select(n, s);
+		end
+	end
+end
+
+---------------------------------------------------------------------------
+-- LB_Range
+-- Builds an iterator over a listbox range
+-- l: Listbox to iterate over
+-- arg[1](...): Start index; if blank, start at 0
+-- arg[2](...): Range count; if blank, use item count
+-- Returns: Iterator which returns index and entry text and datum
+---------------------------------------------------------------------------
+function LB_Range (l, ...)
+	------------------------------------------------------------------------------------
+	-- Setup some upvalues for the iterator. Get any non-default values that are given, 
+	-- and clamp the range to [0,size).
+	------------------------------------------------------------------------------------
+	local n, a, s, c = Listbox.GetItemCount(l), Main.WP[l].a, arg[1], arg[2];
+	if not s then s = 0 end;
+	if not c then c = n end;
+	local e = s + c;
+	if e > n then e = n end;
+	------------------------------------------------------------------------------------
+	-- Builds the iterator closure. This returns the index and entry of the member that
+	-- is indexed by the second argument plus one; we terminate when this index extends
+	-- beyond the range. The iterator keeps no state, and begins with an index one less
+	-- than the start of the range(it will be coerced into the start when we add one).
+	------------------------------------------------------------------------------------
+	local function _I (state, i)
+		if i + 1 >= e then return nil end;
+		return i + 1, a[i + 1].et, a[i + 1].ed;
+	end
+	return _I, nil, s - 1;
+end
+
+------------------------------------------------------------------
+-- LB_View
+-- Builds an iterator over items in the listbox's view
+-- l: Listbox to iterate over
+-- Returns: Iterator which returns index and entry text and datum
+------------------------------------------------------------------
+function LB_View (l)
+	return LB_Range(l, Listbox.GetOffset(l), Listbox.GetCapacity(l));
+end
+
+------------------------------------------------
+-- LB_Load
+-- Loads a listbox with user listbox properties
+-- l: Name used to reference listbox
+-- lp: Listbox properties
+------------------------------------------------
+function LB_Load (l, lp)
+	if lp then
+		W_SetPictures(l, lp.pDI.p, lp.pOI.p, lp.pGI.p, lp.pEI.p);
+		W_ExchangePictures(l, "pDI", "pOI", "pGI", "pEI");
+		W_SetPictures(l, lp.pDS.p, lp.pOS.p, lp.pGS.p, lp.pES.p);
+		W_ExchangePictures(l, "pDS", "pOS", "pGS", "pES");
+		W_SetPictures(l, lp.pD.p, lp.pO.p, lp.pG.p, lp.pE.p);
+		LB_Clear(l);
+		Listbox.SetCapacity(l, lp.capacity);
+		for i = 1, lp.capacity do
+			if lp.offset + i > lp.items.n then break end;
+			LB_AppendEntry(l, lp.items[lp.offset + i].string, nil, false);
+			if lp.items[lp.offset + i].bSelected then
+				Listbox.SelectItem(l, i - 1, true);
+			end
+		end
+	else
+		W_SetPictures(l, nil, nil, nil, nil);
+		W_ExchangePictures(l, "pDI", "pOI", "pGI", "pEI");
+		W_SetPictures(l, nil, nil, nil, nil);
+		W_ExchangePictures(l, "pDS", "pOS", "pGS", "pES");
+		W_SetPictures(l, nil, nil, nil, nil);
+		LB_Clear(l);
+	end
+end
+
+-------------------------------------------------
+-- NewListbox
+-- Builds a user listbox with default properties
+-- Returns: The new listbox
+-------------------------------------------------
+function NewListbox ()
+	return {
+		items = { n = 0 },	-- Item list
+		capacity = 0,	-- Display capacity
+		offset = 0,	-- Offset index
+		bClick = true,	-- Allow click
+		bDragOver = true,	-- Allow drag over
+		m = { D = "VList", HT = "VList", PE = "NOP", F = "VList" },	-- Methods
+		pD = {}, pO = {}, pG = {}, pE = {}, pDI = {}, pOI = {}, pGI = {}, pEI = {},	pDS = {}, pOS = {}, pGS = {}, pES = {}	-- Pictures
+	};
+end
+
+--------------------------
+-- DeleteListbox
+-- Unloads a user listbox
+-- l: Index of listbox
+--------------------------
+function DeleteListbox (l)
+	-----------------------------------------------------------------------
+	-- Remove the basic widget properties, followed by listbox properties.
+	-----------------------------------------------------------------------
+	local wp = LB_GetEDatum(Main.Comp.Listbox, l);
+	UnregisterWidget(wp);
+	if wp.pDI.p then Render.UnloadPicture(wp.pDI.p) end;
+	if wp.pOI.p then Render.UnloadPicture(wp.pOI.p) end;
+	if wp.pGI.p then Render.UnloadPicture(wp.pGI.p) end;
+	if wp.pEI.p then Render.UnloadPicture(wp.pEI.p) end;
+	if wp.pDS.p then Render.UnloadPicture(wp.pDS.p) end;
+	if wp.pOS.p then Render.UnloadPicture(wp.pOS.p) end;
+	if wp.pGS.p then Render.UnloadPicture(wp.pGS.p) end;
+	if wp.pES.p then Render.UnloadPicture(wp.pES.p) end;
+end
+
+-------------------------------------
+-- SaveListbox
+-- Saves a user listbox
+-- f: File to which listbox is saved
+-- l: Listbox properties
+-------------------------------------
+function SaveListbox (f, l)
+	f:write(string.format("\t<nItem>%i</nItem>\n", l.items.n));
+	for i, v in ipairs(l.items) do
+		f:write("\t<LI>\n");
+		f:write("\t");
+		SaveStrings(f, v, { "string" });
+		f:write("\t");
+		SaveInts(f, v, { "context" });
+		f:write("\t");
+		SaveBooleans(f, v, { "bSelected" });
+		f:write("\t</LI>\n");
+	end
+	SaveMethods(f, l, true);
+	SaveInts(f, l, { "capacity", "offset" });
+	SaveBooleans(f, l, { "bClick", "bDragOver" });
+	SavePictures(f, l, { "pDI", "pOI", "pGI", "pEI", "pDS", "pOS", "pGS", "pES" });
+	SaveWidget(f, l);
+end
+
+----------------------------------------
+-- LoadListboxes
+-- Loads user listboxes from a data set
+-- ld: Loading data
+----------------------------------------
+function LoadListboxes (ld)
+	--------------------------------------------------------------------------------
+	-- If the listbox list is non-empty, run through it, register a new listbox for 
+	-- each entry, and acquire the listbox for loading.
+	--------------------------------------------------------------------------------
+	if not ld.b.Listbox then return end;
+	for i, v in ipairs(ld.b.Listbox) do
+		RegisterComponent("Listbox", v.ID);
+		local d = LB_GetEDatum(Main.Comp.Listbox, i - 1);
+		---------------------------------
+		-- Load required listbox fields.
+		---------------------------------
+		d.m = v.m;
+		---------------------------------
+		-- Load optional listbox fields.
+		---------------------------------
+		if v.tag then d.tag = v.tag end;
+		if v.capacity then d.capacity = v.capacity end;
+		if v.offset then d.offset = v.offset end;
+		if v.bClick ~= nil then d.bClick = v.bClick end;
+		if v.bDragOver ~= nil then d.bDragOver = v.bDragOver end;
+		-----------------------
+		-- Load listbox items.
+		-----------------------
+		if v.LI then d.items = v.LI end;
+		--------------------------
+		-- Load listbox pictures.
+		--------------------------
+		LoadPictures(d, v, { "pD", "pO", "pG", "pE", "pDI", "pOI", "pGI", "pEI", "pDS", "pOS", "pGS", "pES" });
+	end
+end
+
+---------------------------
+-- CacheListbox
+-- Copies the listbox data
+-- l: Listbox properties
+-- Returns: Listbox cache
+---------------------------
+function CacheListbox (l)
+	local lc = { items = { n = 0 } };
+	lc.bClick, lc.bDragOver, lc.capacity, lc.offset = l.bClick, l.bDragOver, l.capacity, l.offset;
+	for i, v in ipairs(l.items) do
+		table.insert(lc.items, { string = v.string, context = v.context, bSelected = v.bSelected });
+	end
+	return lc;
+end
+
+--------------------------------
+-- RestoreListbox
+-- Restores cached listbox data
+-- l: Listbox properties
+-- lc: Listbox cache
+--------------------------------
+function RestoreListbox (l, lc)
+	l.bClick, l.bDragOver, l.capacity, l.offset = lc.bClick, lc.bDragOver, lc.capacity, lc.offset;
+	l.items = { n = 0 };
+	for i, v in ipairs(lc.items) do
+		table.insert(l.items, { string = v.string, context = v.context, bSelected = v.bSelected });
+	end
+end
+
+---------------------------------------------------
+-- InstallTestListboxes
+-- Installs test listboxes from the user listboxes
+---------------------------------------------------
+function InstallTestListboxes ()
+	--------------------------------------------------------
+	-- Create concrete listboxes out of all user listboxes.
+	--------------------------------------------------------
+	for i, t, l in LB_Range(Main.Comp.Listbox) do
+		----------------------------------------------
+		-- Generate a new listbox and store its name.
+		----------------------------------------------
+		Main.W.names[t] = PrimeListbox();
+		---------------------------------------------------------
+		-- Assign all user-configured properties to the listbox.
+		---------------------------------------------------------
+		W_SetPictures(Main.W.names[t], l.pDI.p, l.pOI.p, l.pGI.p, l.pEI.p);
+		W_ExchangePictures(Main.W.names[t], "pDI", "pOI", "pGI", "pEI");
+		W_SetPictures(Main.W.names[t], l.pDS.p, l.pOS.p, l.pGS.p, l.pES.p);
+		W_ExchangePictures(Main.W.names[t], "pDS", "pOS", "pGS", "pES");
+		W_SetPictures(Main.W.names[t], l.pD.p, l.pO.p, l.pG.p, l.pE.p);
+		W_SetText(Main.W.names[t], Main.T18, 0);
+		MapMethods(Main.W.names[t], l.m.D, l.m.HT, l.m.PE, l.m.F);
+		Listbox.AllowItemClick(Main.W.names[t], l.bClick);
+		Listbox.AllowDragOver(Main.W.names[t], l.bDragOver);
+		for li, v in ipairs(l.items) do
+			LB_AppendEntry(Main.W.names[t], v.string, v, false);
+			Listbox.SelectItem(Main.W.names[t], li - 1, v.bSelected);
+			Listbox.SetItemContext(Main.W.names[t], li - 1, v.context);
+		end
+		Listbox.SetCapacity(Main.W.names[t], l.capacity);
+		Listbox.SetOffset(Main.W.names[t], l.offset);
+		Widget.SetTag(Main.W.names[t], l.tag);
+	end
+end

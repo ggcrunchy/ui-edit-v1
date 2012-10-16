@@ -1,0 +1,106 @@
+-------------------------------------------
+-- DrawRect
+-- Draws a box, given two coordinate pairs
+-- x1, y1: First pair of coordinates
+-- x2, y2: Second pair of coordinates
+-------------------------------------------
+function DrawRect (x1, y1, x2, y2)
+	x1, y1, x2, y2 = SortPairs(x1, y1, x2, y2);
+	Render.DrawBox(x1, y1, x2 - x1, y2 - y1, 1, 1, 1);
+end
+
+----------------------------------------------
+-- DrawString
+-- Draws a clipped string at a given position
+-- s: String to draw
+-- t: Font and text set to use
+-- x, y: String coordinates
+-- w, h: String clipping dimensions
+-- Returns: The clipped dimensions
+----------------------------------------------
+function DrawString (s, t, x, y, w, h)
+	local eW = x + w;
+	local vW, vH = Render.GetVideoSize();
+	for c in string.gfind(s, ".") do
+		local cW, cH = Render.GetTextSize(t.font, c);
+		local dW, dH = cW / vW, cH / vH;
+		if x + dW < eW then
+			Render.DrawTextImage(t.text[c], x, y, dW, dH);
+			x = x + dW;
+		else
+			Render.DrawClippedTextImage(t.text[c], x, y, dW, dH, eW - x, h);
+			return eW, h;
+		end
+	end
+	return x, h;
+end
+
+-------------------------------------
+-- DrawWidget
+-- Draws common elements of a widget
+-- n: Name used to reference widget
+-- x, y: Widget coordinates
+-- w, h: Widget dimensions
+-------------------------------------
+function DrawWidget (n, x, y, w, h)
+	local p = Main.WP[n];
+	--------------------------------------------------------
+	-- Choose the picture appropriate for the widget state.
+	--------------------------------------------------------
+	local i, a = p.pD;
+	if Widget.IsGrabbed(n) then
+		if not Widget.IsEntered(n) then
+			a = p.pO;
+		else
+			a = p.pG;
+		end
+	elseif Widget.IsEntered(n) then
+		a = p.pE;
+	end;
+	if a then i = a end;
+	-----------------------------------------------------------
+	-- If a picture was found, draw it. Otherwise, draw a box.
+	-----------------------------------------------------------
+	if i then
+		Render.DrawPicture(i, x, y, w, h);
+	else
+		Render.DrawBox(x, y, w, h, 1, 1, 1);
+	end
+end
+
+---------------------------------------
+-- DrawWidgetMember
+-- Draws specific elements of a widget
+-- n: Name used to reference widget
+-- x, y: Element coordinates
+-- w, h: Element dimensions
+-- mg: Member grabbed routine
+-- me: Member entered routine
+---------------------------------------
+function DrawWidgetMember (n, x, y, w, h, mg, me)
+	--------------------------------------------------------------------------------
+	-- Swap grab routines, fake drawing a widget to draw the member, and swap back.
+	--------------------------------------------------------------------------------
+	local wg, we = Widget.IsGrabbed, Widget.IsEntered;
+	Widget.IsGrabbed, Widget.IsEntered = mg, me;
+	DrawWidget(n, x, y, w, h);
+	Widget.IsGrabbed, Widget.IsEntered = wg, we;
+end
+
+-------------------------------------
+-- DrawWidgetPicture
+-- Draws a widget using a specific picture
+-- n: Name used to reference widget
+-- p: Picture to draw
+-- x, y: Widget coordinates
+-- w, h: Widget dimensions
+-------------------------------------
+function DrawWidgetPicture (n, p, x, y, w, h)
+	-------------------------------------------------------
+	-- If a picture was found, draw it. Frame it in a box.
+	-------------------------------------------------------
+	if Main.WP[n][p] then
+		Render.DrawPicture(Main.WP[n][p], x, y, w, h);
+	end
+	Render.DrawBox(x, y, w, h, 1, 1, 1);
+end

@@ -1,0 +1,5 @@
+-------------------
+-- LoadScriptEnter
+-------------------
+function LoadScriptEnter ()
+end

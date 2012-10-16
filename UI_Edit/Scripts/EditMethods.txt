@@ -1,0 +1,74 @@
+-----------------------------------------------
+-- EditMethodsEnter
+-- Enters the edit methods popup of the editor
+-----------------------------------------------
+function EditMethodsEnter ()
+	-------------------------------------------------------------------
+	-- If we have not loaded the edit methods popup, proceed to do so.
+	-------------------------------------------------------------------
+	if not Main.S.EditMethods then
+		---------------------------------------
+		-- Processes events for the OK button.
+		---------------------------------------
+		local function _PE_OK ()
+			-------------------------------------------------------
+			-- Assign the chosen methods to the current component.
+			-------------------------------------------------------
+			local m = LB_GetSDatum(Main.Comp[Main.CurComp]).m;
+			for k, t in pairs({ "D", "HT", "PE", "F" }) do
+				m[t] = LB_GetSText(Main.CurT[t]);
+			end
+			----------------------------------------------------------------------
+			-- Indicate that we have produced changes that need saving, and exit.
+			----------------------------------------------------------------------
+			Main.Save = true;
+			ClosePopup();
+		end
+		-------------------------------------------------
+		-- Create and install the layer and its widgets.
+		-------------------------------------------------
+		SetupSectionTable("EditMethods", 0, 0, .4, .3, true);
+		SetupListbox("D", 2, .05, .15, .3, .2, LB_SelectNoRefresh);
+		SetupListboxUpButton(.4, .15, .1, .1, Main.CurT.D);
+		SetupListboxDownButton(.4, .25, .1, .1, Main.CurT.D);
+		SetupListbox("HT", 2, .55, .15, .3, .2, LB_SelectNoRefresh);
+		SetupListboxUpButton(.9, .15, .1, .1, Main.CurT.HT);
+		SetupListboxDownButton(.9, .25, .1, .1, Main.CurT.HT);
+		SetupListbox("PE", 2, .05, .5, .3, .2, LB_SelectNoRefresh);
+		SetupListboxUpButton(.4, .5, .1, .1, Main.CurT.PE);
+		SetupListboxDownButton(.4, .6, .1, .1, Main.CurT.PE);
+		SetupListbox("F", 2, .55, .5, .3, .2, LB_SelectNoRefresh);
+		SetupListboxUpButton(.9, .5, .1, .1, Main.CurT.F);
+		SetupListboxDownButton(.9, .6, .1, .1, Main.CurT.F);
+		SetupButton("OK", 0, .7, .5, .3, PushButton(_PE_OK));
+		SetupButton("Cancel", .5, .7, .5, .3, LeavePopupCancel);
+	end
+	----------------------------------------------
+	-- On entry, enumerate the available methods.
+	----------------------------------------------
+	if Main.Enter[Main.Tier] then
+		---------------------------------------------------------------------------------
+		-- Run through each of the four method typess, first clearing the popup's lists.
+		---------------------------------------------------------------------------------
+		local mt = LB_GetSDatum(Main.Comp[Main.CurComp]).m;
+		for k, t in pairs({ "D", "HT", "PE", "F" }) do
+			LB_Clear(Main.S.EditMethods[t]);
+			---------------------------------------------------------------------------
+			-- Enumerate the methods of each type available to this component. Proceed
+			-- to add these to the type's list; if a method matches the component's
+			-- current choice, select the added item.
+			---------------------------------------------------------------------------
+			local s = EnumerateMethods(Main[string.format("%s_Set", t)], Main.CurComp);
+			for i, m in ipairs(s) do
+				LB_AppendEntry(Main.S.EditMethods[t], m, nil, true);
+				if mt[t] == m then
+					LB_Select(Main.S.EditMethods[t], i - 1);
+				end
+			end
+		end
+	end
+	--------------------
+	-- Enter the popup.
+	--------------------
+	LoadSectionTable("EditMethods");
+end

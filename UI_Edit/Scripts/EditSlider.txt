@@ -1,0 +1,265 @@
+------------------------------------------------
+-- EditSliderEnter
+-- Enters the edit slider section of the editor
+------------------------------------------------
+function EditSliderEnter ()
+	--------------------------------------------------------------------
+	-- If we have not loaded the edit slider section, proceed to do so.
+	--------------------------------------------------------------------
+	if not Main.S.EditSlider then
+		----------------------------------
+		-- Draws the current user slider.
+		----------------------------------
+		local function _D_Cur (n, a, x, y, w, h)
+			local s = LB_GetSDatum(Main.Comp.Slider);
+			if s then
+				--------------------
+				-- Draw the slider.
+				--------------------
+				S_Load(n, s);
+				_D_Slider(n, a, x, y, w, h);
+			end
+			Render.DrawBox(x, y, w, h, 1, 1, 1);
+		end
+		-----------------------------------------
+		-- Hit test for the current user slider.
+		-----------------------------------------
+		local function _HT_Cur (n, cx, cy, a, x, y, w, h)
+			local s = LB_GetSDatum(Main.Comp.Slider);
+			if s then
+				S_Load(n, s);
+				_HT_Slider(n, cx, cy, a, x, y, w, h);
+			end
+		end
+		-------------------------------------------------
+		-- Create and install the layer and its widgets.
+		-------------------------------------------------
+		SetupSectionTable("EditSlider", 0, 0, 1, 1, false);
+		SetupPaneItemCore("Slider", "No sliders to delete.", nil, nil, EditSliderFeaturesEnter);
+		-----------------------------
+		-- Setup the slider display.
+		-----------------------------
+		local s = PrimeSlider();
+		AssignMethodsRaw(s, _D_Cur, _HT_Cur, nil, nil);
+		Slider.AllowSnap(s, false);
+		Slider.AllowThumbDrag(s, false);
+		Pane.AddItem(Main.CurP, s, .05, .3, .65, .65);
+		--------------------------------------------------
+		-- Load slider-specific picture property entries.
+		--------------------------------------------------
+		table.insert(Main.PicProp["Slider"], { s = "T. Normal", p = "pDT" });
+		table.insert(Main.PicProp["Slider"], { s = "T. Entered", p = "pET" });
+		table.insert(Main.PicProp["Slider"], { s = "T. Grabbed", p = "pGT" });
+		table.insert(Main.PicProp["Slider"], { s = "T. Outside", p = "pOT" });
+	end
+	----------------------
+	-- Enter the section.
+	----------------------
+	LoadSectionTable("EditSlider");
+end
+
+---------------------------------------------------------
+-- EditSliderFeaturesEnter
+-- Enters the edit slider features section of the editor
+---------------------------------------------------------
+function EditSliderFeaturesEnter ()
+	-----------------------------------------------------------------------------
+	-- If we have not loaded the edit slider features section, proceed to do so.
+	-----------------------------------------------------------------------------
+	if not Main.S.EditSliderFeatures then
+		-----------------------------
+		-- Draws the slider control.
+		-----------------------------
+		local function _D_Cur (n, a, x, y, w, h)
+			local s = LB_GetSDatum(Main.Comp.Slider);
+			-------------------------------------------------------------------------
+			-- If the slider control is pushed, fit the slider's end position to the 
+			-- cursor coordinates.
+			-------------------------------------------------------------------------
+			if Button.IsPushed(n) then
+				s.ex, s.ey = (Main.CursorX - x) / w, (Main.CursorY - y) / h;
+			end
+			----------------------------------------------------------------------
+			-- Given new start and end coordinates and dimensions, we may need to
+			-- correct some of these so the thumb does not go outside the slider.
+			----------------------------------------------------------------------
+			SliderFixThumbCoordinates(s);
+			-----------------------------------------------------------------------
+			-- Draw thumb-sized boxes centered at the start and end positions, and
+			-- display a line between the start and end positions. Draw another
+			-- box at the position generated from the offset.
+			-----------------------------------------------------------------------
+			Render.DrawLine(x + s.sx * w, y + s.sy * h, x + s.ex * w, y + s.ey * h, 1, 0, 0);
+			local px, py = s.sx + s.offset * (s.ex - s.sx), s.sy + s.offset * (s.ey - s.sy);
+			Render.DrawBox(x + (s.sx - .5 * s.tw) * w, y + (s.sy - .5 * s.th) * h, s.tw * w, s.th * h, 0, 1, 0);
+			Render.DrawBox(x + (s.ex - .5 * s.tw) * w, y + (s.ey - .5 * s.th) * h, s.tw * w, s.th * h, 0, 0, 1);
+			Render.DrawBox(x + (px - .5 * s.tw) * w, y + (py - .5 * s.th) * h, s.tw * w, s.th * h, 1, 1, 1);
+			Render.DrawBox(x, y, w, h, 1, 1, 1);
+		end
+		--------------------------------------------
+		-- Processes events for the slider control.
+		--------------------------------------------
+		local function _PE_Cur (n, e, a)
+			--------------------------------------------------------------------------
+			-- If the slider control is pushed, fit the slider's starting position to
+			-- the cursor coordinates, correct these to make sure the thumb does not
+			-- lie outside the slider, and indicate unsaved changes.
+			--------------------------------------------------------------------------
+			if e == Widget.ButtonPush then
+				local s = LB_GetSDatum(Main.Comp.Slider);
+				local x, y, w, h = Widget.GetXYWH(n, true);
+				local cx, cy = UI.GetEventPoint();
+				s.sx, s.sy = (cx - x) / w, (cy - y) / h;
+				SliderFixThumbCoordinates(s);
+				Main.Save = true;
+			end
+		end
+		-------------------------------------------
+		-- Processes events for the cancel button.
+		-------------------------------------------
+		local function _PE_C ()
+			--------------------------------------------------------------------------
+			-- Restore the cached slider data and the save indicator. Exit the popup.
+			--------------------------------------------------------------------------
+			local s, d = LB_GetSDatum(Main.Comp.Slider), Main.CurT.Data;
+			s.bSnap, s.bDrag, s.offset, s.sx, s.sy, s.ex, s.ey, s.tw, s.th, Main.Save = d.bSnap, d.bDrag, d.offset, d.sx, d.sy, d.ex, d.ey, d.tw, d.th, Main.SaveC;
+			ClosePopup();
+		end
+		-------------------------------------------
+		-- Processes events for the offset slider.
+		-------------------------------------------
+		local function _PE_O (n, e, a)
+			--------------------------------
+			-- Process basic slider events.
+			--------------------------------
+			_PE_Slider(n, e, a);
+			---------------------------------------------------------------------
+			-- If the thumb is dragged or snapped, update the slider offset, and 
+			-- indicate unsaved changes.
+			---------------------------------------------------------------------
+			if e == Widget.SliderDragThumb or e == Widget.SliderSnapThumb then
+				LB_GetSDatum(Main.Comp.Slider).offset = Slider.GetOffset(Main.CurT.O);
+				Main.Save = true;
+			end
+		end
+		------------------------------------------
+		-- Processes events for the width slider.
+		------------------------------------------
+		local function _PE_W (n, e, a)
+			--------------------------------
+			-- Process basic slider events.
+			--------------------------------
+			_PE_Slider(n, e, a);
+			----------------------------------------------------------------------------
+			-- If the thumb is dragged or snapped, update the thumb width, and indicate
+			-- unsaved changes.
+			----------------------------------------------------------------------------
+			if e == Widget.SliderDragThumb or e == Widget.SliderSnapThumb then
+				LB_GetSDatum(Main.Comp.Slider).tw = Slider.GetOffset(Main.CurT.W);
+				Main.Save = true;
+			end
+		end
+		-------------------------------------------
+		-- Processes events for the height slider.
+		-------------------------------------------
+		local function _PE_H (n, e, a)
+			--------------------------------
+			-- Process basic slider events.
+			--------------------------------
+			_PE_Slider(n, e, a);
+			-----------------------------------------------------------------------------
+			-- If the thumb is dragged or snapped, update the thumb height, and indicate 
+			-- unsaved changes.
+			-----------------------------------------------------------------------------
+			if e == Widget.SliderDragThumb or e == Widget.SliderSnapThumb then
+				LB_GetSDatum(Main.Comp.Slider).th = Slider.GetOffset(Main.CurT.H);
+				Main.Save = true;
+			end
+		end
+		-------------------------------------------
+		-- Responds to checkbox allow snap toggle.
+		-------------------------------------------
+		local function _SnapT (c)
+			-------------------------------------------------------
+			-- Toggle the snap flag, and indicate unsaved changes.
+			-------------------------------------------------------
+			LB_GetSDatum(Main.Comp.Slider).bSnap, Main.Save = c, true;
+		end
+		-------------------------------------------
+		-- Responds to checkbox allow drag toggle.
+		-------------------------------------------
+		local function _DragT (c)
+			-------------------------------------------------------
+			-- Toggle the drag flag, and indicate unsaved changes.
+			-------------------------------------------------------
+			LB_GetSDatum(Main.Comp.Slider).bDrag, Main.Save = c, true;	
+		end
+		-----------------------------------------------
+		-- Static text for displaying feature offsets.
+		-----------------------------------------------
+		local function _ST (t, f, x, y, w, h)
+			-----------------------------------------------------------------
+			-- Closure used to display desired property and preferred value.
+			-----------------------------------------------------------------
+			local function _D_ST (n, a, x, y, w, h)
+				DrawString(string.format("%s = %f", t, LB_GetSDatum(Main.Comp.Slider)[f]), Main.T18, x, y, w, h);
+				Render.DrawBox(x, y, w, h, 1, 1, 1);
+			end
+			-------------------------------------------
+			-- Setup static text as image-less button.
+			-------------------------------------------
+			local b = PrimeButton();
+			AssignMethodsRaw(b, _D_ST, nil, nil, nil);
+			Pane.AddItem(Main.CurP, b, x, y, w, h);
+		end
+		-------------------------------------------------
+		-- Create and install the layer and its widgets.
+		-------------------------------------------------
+		SetupSectionTable("EditSliderFeatures", 0, 0, .6, .6, true);
+		SetupButton("OK", 0, .8, .3, .2, LeavePopup);
+		SetupButton("Cancel", .3, .8, .3, .2, PushButton(_PE_C));
+		SetupCheckbox("Snap", .05, .5, .075, .075, ToggleCheckbox(_SnapT));
+		SetupCheckbox("Drag", .05, .6, .075, .075, ToggleCheckbox(_DragT));
+		SetupSlider("O", .05, .15, .6, .1, .1, .5, .9, .5, .1, .9, _PE_O);
+		SetupSlider("W", .05, .25, .6, .1, .1, .5, .9, .5, .1, .9, _PE_W);
+		SetupSlider("H", .05, .35, .6, .1, .1, .5, .9, .5, .1, .9, _PE_H);
+		_ST("Offset", "offset", .675, .15, .3, .1);
+		_ST("Width", "tw", .675, .25, .3, .1);
+		_ST("Height", "th", .675, .35, .3, .1);
+		-----------------------------
+		-- Setup the slider control.
+		-----------------------------
+		local b = PrimeButton();
+		AssignMethodsRaw(b, _D_Cur, nil, _PE_Cur, nil);
+		Pane.AddItem(Main.CurP, b, .625, .6, .35, .35);
+		------------------------------
+		-- Setup the help text links.
+		------------------------------
+		SetupHelpText(.05, .025, .925, .1, "Offset / dimensions", "ES_Sliders");
+		SetupHelpText(.15, .5, .25, .075, "Snappable", "ES_Snap", false);
+		SetupHelpText(.15, .6, .25, .075, "Draggable", "ES_Drag", false);
+		SetupHelpText(.625, .5, .35, .075, "Slider position", "ES_Pos");
+	end
+	--------------------
+	-- Enter the popup.
+	--------------------
+	LoadSectionTable("EditSliderFeatures");
+	--------------------------------------------------------
+	-- On entry, prepare the slider and allow for a cancel.
+	--------------------------------------------------------
+	if Main.Enter[Main.Tier] then
+		---------------------------
+		-- Cache the slider state. 
+		---------------------------
+		local s = LB_GetSDatum(Main.Comp.Slider);
+		Main.CurT.Data = { bSnap = s.bSnap, bDrag = s.bDrag, offset = s.offset, sx = s.sx, sy = s.sy, ex = s.ex, ey = s.ey, tw = s.tw, th = s.th };
+		-------------------------------------------------------------------
+		-- Setup the checkboxes and sliders to reflect the current slider.
+		-------------------------------------------------------------------
+		Checkbox.Check(Main.CurT.Snap, s.bSnap);
+		Checkbox.Check(Main.CurT.Drag, s.bDrag);
+		Slider.SetOffset(Main.CurT.O, s.offset);
+		Slider.SetOffset(Main.CurT.W, s.tw);
+		Slider.SetOffset(Main.CurT.H, s.th);
+	end
+end

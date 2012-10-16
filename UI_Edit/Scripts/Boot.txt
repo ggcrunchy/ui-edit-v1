@@ -1,0 +1,57 @@
+----------------
+-- Script data.
+----------------
+BootScripts = {
+	ToLoad = {	-- List of script files to boot
+		--------------------------
+		-- Some useful functions.
+		--------------------------
+		"FileTools.txt", "ResourceTools.txt", "MethodTools.txt", "SectionTools.txt",
+		"DrawTools.txt", "UtilityTools.txt", "TaskTools.txt", "TrapTools.txt",
+		"SceneTools.txt",
+		---------------------------------------------------
+		-- Some useful functions related to UI components.
+		---------------------------------------------------
+		"LayerTools.txt", "PaneTools.txt", "ButtonTools.txt", "SliderTools.txt",
+		"ListboxTools.txt",	"TextboxTools.txt", "CheckboxTools.txt", "RadioboxTools.txt",
+		"WidgetTools.txt", 
+		---------------------------------------
+		-- Some methods and related utilities.
+		---------------------------------------
+		"Draw.txt",	"HitTest.txt", "ProcessEvent.txt", "Fit.txt",
+		------------------------------
+		-- Setup for editor sections.
+		------------------------------
+		"MainSection.txt", "TestSection.txt", "EditFrame.txt", "EditLayer.txt",
+		"EditPane.txt",	"EditButton.txt", "EditSlider.txt", "EditListbox.txt",
+		"EditTextbox.txt", "EditCheckbox.txt", "EditRadiobox.txt",
+		----------------------------
+		-- Setup for editor popups.
+		----------------------------
+		"EditPictures.txt", "EditMethods.txt", "EditTagAndID.txt", "LoadScene.txt",
+		"SaveScene.txt", "LoadScript.txt", "Prompts.txt",
+		---------------------------------------------------
+		-- Initialization, data loading, and main routine.
+		---------------------------------------------------
+		"Setup.txt", "Data.txt", "Help.txt", "Main.txt"
+	}, 
+	Booted = {}	-- Table of booted scripts(used to filter possible custom scripts)
+};
+----------------------------------------
+-- Indicate that this script is booted.
+----------------------------------------
+BootScripts.Booted["Boot.txt"] = true;
+---------------------------------------------------------------------------------------
+-- Iterate through the list of scripts, loading them in order. If a load fails, report
+-- the problem and quit. Otherwise, run the script and indicate that it booted.
+---------------------------------------------------------------------------------------
+for k, n in pairs(BootScripts.ToLoad) do
+	local f, e = loadfile(string.format("Scripts/%s", n));
+	if not f then
+		Printf("Unable to load script: %s", n);
+		Printf(e);
+		return;
+	end
+	f();
+	BootScripts.Booted[n] = true;	
+end
